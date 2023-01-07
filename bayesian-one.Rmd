@@ -300,16 +300,16 @@ cor(x_ergodic, y_ergodic) # cor[X, Y] = rho
 
 
 ## MH抽样
-&emsp;&emsp;如果某个满条件分布不容易抽样，则可以借助MH算法进行抽样。    
+&emsp;&emsp;如果某个满条件分布不容易抽样，则可以借助Metropilis-Hastings算法(MH算法)进行抽样。    
 &emsp;&emsp;MH算法需要建议分布。    
 &emsp;&emsp;算法如下：    
 &emsp;&emsp;1.构造合适的建议分布$q(\cdot|\theta^{(t)})$;    
 &emsp;&emsp;2.从某个分布$g$中产生$\theta^{(0)}$;    
 &emsp;&emsp;3.重复下面过程，直至马尔科夫链达到平衡状态      
-&emsp;&emsp;a)从$q(\cdot|\theta^{(t)})$中产生候选点$\theta^{'}$;    
+&emsp;&emsp;a)从$q(\cdot|\theta^{(t)})$中产生候选点$\theta^{(cand)}$;    
 &emsp;&emsp;b)从均匀分布$U(0,1)$中产生U;    
-&emsp;&emsp;c)判断：如果$U \le \frac{\pi(\theta^{'}|x)q(\theta^{(t))}|\theta^{(')})}{\pi(\theta^{(t)}|x)q(\theta^{'}|\theta^{(t)})}$，则接受$\theta^{'}$，并令$\theta^{(t+1)}=\theta^{'}$，否则令$\theta^{(t+1)}=\theta^{(t)}$;    
-&emsp;&emsp;d)增加$t$,返回到a)。    
+&emsp;&emsp;c)判断：如果$U \le \frac{\pi(\theta^{(cand)}|x)q(\theta^{(t))}|\theta^{(cand)})}{\pi(\theta^{(t)}|x)q(\theta^{(cand)}|\theta^{(t)})}$，则接受$\theta^{(cand)}$，并令$\theta^{(t+1)}=\theta^{(cand)}$，否则令$\theta^{(t+1)}=\theta^{(t)}$;    
+&emsp;&emsp;d)增加$t$，返回到a)。    
 &emsp;&emsp;Gibbs抽样法是一种特殊的MH算法，其中的每一个候选点都被接受。   
 &emsp;&emsp;MH算法具有普遍意义。  
 
