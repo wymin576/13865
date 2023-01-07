@@ -1,0 +1,498 @@
+---
+title: "贝叶斯统计"
+author: "汪燕敏"
+organization: "安徽财经大学统计与应用数学学院"
+output: pdf_document
+date: "2022-12-31"
+geometry: margin=2cm
+documentclass: ctexart
+---
+
+# 第一章 &emsp;&emsp; 贝叶斯统计简介   
+## 1.什么是贝叶斯统计   
+&emsp;&emsp;英国学者Thomas Bayes在其论文《Essay towards solving a problem in the doctrine of chances》中提出的一种归纳推理理论，后被一些统计学者发展为一种系统的统计推断方法，称为贝叶斯方法。     
+认为贝叶斯方法是唯一合理的统计推断方法的统计学者组成数理统计学中的贝叶斯学派，其形成可追溯到 20世纪30年代。二战以后发展为一个有影响的学派。  
+
+&emsp;&emsp;与之对峙的是频率学派。代表人物是英国的皮尔逊、费希尔等人。    
+&emsp;&emsp;理解贝叶斯统计必须理解贝叶斯定理。   
+
+### 贝叶斯定理    
+&emsp;&emsp;如果有两个随机事件A,B，那么给定A,B的条件概率可以表示为
+\begin{equation}
+P(B|A)=\frac{P(AB)}{P(A)}=\frac{P(B)P(A|B)}{P(A)}
+\end{equation}
+&emsp;&emsp;这就是概率论里的*条件概率*，也称作*贝叶斯定理*。  
+&emsp;&emsp;在统计学中，如果$A$代表数据$x$，$B$代表参数$\theta$,那么公式(1)可以表示为
+\begin{equation}
+P(\theta|x)=\frac{P(\theta,x)}{m(x)}=\frac{\pi(\theta)P(x|\theta)}{m(x)}=\frac{\pi(\theta)L}{m(x)}
+\end{equation}
+&emsp;&emsp;这就是贝叶斯公式。$m(x)$是数据的*边缘分布*，$L$是*似然函数*,$\pi(\theta)$是参数的*先验(分布)*。
+&emsp;&emsp;由于分母$m(x)$与$\theta$无关，所以公式(2)可以表示为
+\begin{equation}
+P(\theta|x) \propto \pi(\theta)L
+\end{equation}
+
+&emsp;&emsp;**后验分布=先验分布+样本分布**
+  
+&emsp;&emsp;为了比较频率学派和贝叶斯学派的范式，用一个小例子说明。   
+
+### 例1     
+&emsp;&emsp;10次伯努利实验，成功1次。问成功率是多少？   
+&emsp;&emsp;频率学派求点估计的思路是用极大似然法，可以得到点估计值是1/10。(证明它)   
+&emsp;&emsp;贝叶斯学派认为参数和数据都是随机的。有了样本数据意味着给定数据求参数，于是我们可以根据以上信息求参数的后验分布。  
+&emsp;&emsp;问题是我们需要参数的先验分布。这里采用*拉普拉斯先验*$\theta \sim U(0,1)$。   
+
+&emsp;&emsp;于是
+\[p(\theta|x) \propto L*\pi(\theta) \propto \theta^{2-1}(1-\theta)^{10-1}*1\]
+
+&emsp;&emsp;这是贝塔分布$Be(2,10)$密度函数的*核*。因此根据密度函数的正则性可以推出$\theta|x \sim Be(2,10)$.  
+&emsp;&emsp;如果点估计取期望，则$\hat \theta= \frac {2}{12}$；    
+&emsp;&emsp;如果点估计取众数(mode),则$\hat \theta= \frac {1}{10}$,与极大似然估计值相同。     
+ 
+&emsp;&emsp;贝叶斯方法的目标是求参数的分布。给定特定的先验（共轭），可以直接得到后验分布。
+&emsp;&emsp;如果不是共轭先验呢？后验分布的密度函数可以写出，但不是已知分布，往往涉及大量的积分运算。  &emsp;&emsp;由贝叶斯定理，更新后的分布用后验分布表示为  
+\begin{equation}
+\pi (\theta|x)=\frac {\pi(\theta) p(x|\theta)}{\int \pi(\theta) p(x|\theta) d \theta}
+\end{equation}
+&emsp;&emsp;一般性的贝叶斯估计为
+\begin{equation}
+\hat{g(\theta)}=\frac {\int g(\theta) \pi(\theta) p(x|\theta)d \theta}{\int \pi(\theta) p(x|\theta) d \theta}
+\end{equation}
+&emsp;&emsp;这时候，MCMC登场了。也就是用*随机模拟*的方法获得后验分布。    
+&emsp;&emsp;因此，如果说经典统计偏向*数学方法*，那么贝叶斯统计则偏向*模拟方法*。
+
+
+## 2.为什么要学贝叶斯统计    
+&emsp;&emsp;贝叶斯统计与经典统计不是非此即彼的关系。对于本科生来说，两种推断方法都需要掌握。正如R和Python,掌握一门软件是不够的，必须两门都掌握。     
+&emsp;&emsp;与经典统计相比，贝叶斯统计有什么优势呢？    
+&emsp;&emsp;**容易学**：与经典统计相比，贝叶斯统计仅仅是加了个先验和MCMC而已。       
+&emsp;&emsp;**更容易解释**：考虑例1的变形。如果10次实验成功次数为0，我们得到的成功率的点估计是0。那么100次实验成功次数为0,1000次实验成功次数为0,成功率的点估计都是0。尽管这从统计上是没错的，但给人的感觉是不同的。随着实验次数的增长，实验者对成功事件出现的信心会越来越弱。贝叶斯估计可以反映这一点。（基于拉普拉斯先验证明它）。       
+&emsp;&emsp;考虑另一个相似的情形。某公司需要采购办公用品，三家公司来游说购买他们的产品。负责采购的领导说：“产品质量说了算”。于是组织质量检查，抽取100个产品检查次品率。结果三家企业产品的次品率都是0。极大似然法无助于决策。这个时候你了解到这三家企业一家是世界500强，另一家是中国500强，还有一家是本省500强。你会选择哪家企业呢？    
+&emsp;&emsp;**样本量很小或者样本缺失**：明天联想股票是涨还是跌？这是一次性事件。极大似然估计无能为力，但贝叶斯估计可以:找专家咨询获得先验，然后求先验预测分布。   
+
+### 3.对贝叶斯统计的批评    
+&emsp;&emsp;在MCMC应用于贝叶斯统计以前，贝叶斯方法的数学性质是很清除的。参考Jeffreys对无信息先验的证明。    
+&emsp;&emsp;但现在，贝叶斯方法越来越依赖于MCMC。Andrew Gelman说，我们不仅难以评价贝叶斯方法的统计性质，甚至不能完全确定是否收敛，仅仅添加了一些无法验证的假设。不少人将贝叶斯方法视为“伪科学”。   
+
+## 贝叶斯统计简史    
+
+## 贝叶斯其人    
+&emsp;&emsp;1702年出生于伦敦   
+&emsp;&emsp;1719年进入爱丁堡大学学习，学习逻辑学和神学   
+&emsp;&emsp;1722年毕业   
+&emsp;&emsp;1733成为牧师   
+&emsp;&emsp;1742年当选为皇家学会会员   
+&emsp;&emsp;1752年退休   
+&emsp;&emsp;1761年4月17日逝世于Kent郡   
+&emsp;&emsp;1764年论文发表   
+
+&emsp;&emsp;以上内容参考自圣安德鲁斯大学对贝叶斯的介绍。   
+网址https://mathshistory.st-andrews.ac.uk/Biographies/Bayes/
+
+
+## 发展过程    
+&emsp;&emsp;阶段1: 起源
+
+&emsp;&emsp;阶段2: 荣耀的60年代The Glorious Sixties    
+
+&emsp;&emsp;阶段3: 实效的70年代The Pragmatic Seventies    
+
+&emsp;&emsp;阶段4: 神秘的80年代The Enigmatic Eighties   
+
+&emsp;&emsp;阶段5: 成为明星的90年代To the Stars in the Nineties   
+
+&emsp;&emsp;阶段6: Bayesian-Fisherian合流的21世纪
+
+
+# 第二章 &emsp;&emsp; 先验    
+## 1.共轭先验 
+&emsp;&emsp;定义1  设$\theta$是总体分布中的参数（或参数向量），$\pi(\theta)$是$\theta$的
+先验密度函数，假如由抽样信息算得的后验密度函数与$\pi(\theta)$有相同的函数形式，
+则称$\pi(\theta)$是$\theta$的*共轭先验分布*。   
+&emsp;&emsp;共轭先验分布的选取是由似然函数$L(\theta)=p(x|\theta)$中所含$\theta$的因式决定的，
+即选与似然函数具有相同核的分布作为先验分布。    
+
+### 1.1 二项模型   
+&emsp;&emsp;设总体$X \sim b(n,\theta)$,其密度函数中与$\theta$有关部分（核）为$\theta^x(1-\theta)^{n-x}$。
+由此设$\theta$的先验分布为贝塔分布$Be(\alpha,\beta)$。求后验分布。
+
+
+### 1.2 泊松模型    
+&emsp;&emsp;设$x_1,\dots,x_n$是来自泊松分布$Exp(\lambda)$的一组样本观察值。
+基于共轭先验求后验分布。
+
+### 1.3 指数模型    
+&emsp;&emsp;设$x_1,\dots,x_n$是来自指数分布$Exp(\lambda)$的一组样本观察值。
+基于共轭先验求后验分布。   
+
+### 1.4 正态模型（方差已知） 
+&emsp;&emsp;设$x_1,\dots,x_n$是来自正态分布$N(\theta,\sigma^2)$的一组样本观察值。
+其中$\sigma_2$已知。基于共轭先验求后验分布。
+
+### 1.5 正态模型（均值已知）    
+&emsp;&emsp;设$x_1,\dots,x_n$是来自正态分布$N(\theta,\sigma^2)$的一组样本观察值。其中$\theta$
+已知。现取倒伽玛分布$Ga(\alpha,\lambda)$作为正态方差$\sigma^2$的先验分布(不是$\sigma$)。
+其中$\alpha$和$\lambda$已知。基于共轭先验求后验分布。
+
+&emsp;&emsp;表1 常用共轭先验分布
+\begin{tabular}{ccc}
+\hline
+总体分布 & 参数 & 共轭先验分布 \\
+\hline
+二项分布 & 成功概率 & 贝塔分布 \\
+泊松分布 & 均值 & 伽玛分布 \\
+指数分布 & 均值的倒数 & 伽玛分布 \\
+正态分布（方差已知） & 均值 & 正态分布 \\
+正态分布（均值已知） & 方差 & 伽玛分布 \\
+\hline
+\end{tabular}
+
+
+## 2.无信息先验  
+
+**如果没有先验信息，如何确定先验分布？**    
+&emsp;&emsp;Bayes用的是贝叶斯假设，就是拉普拉斯先验。什么场合可使用贝叶斯假设？
+如果不能使用贝叶斯假设，无信息先验又如何确定？
+&emsp;&emsp;首先要知道该参数$\theta$在总体分布中的地位，是位置参数，还是尺度参数？    
+&emsp;&emsp;根据参数在分布的地位选用适当变换下的不变性来确定其无信息先验。
+&emsp;&emsp;当$\theta$为位置参数时，其先验分布可用贝叶斯假设作为无信息先验。    
+&emsp;&emsp;当$\theta$为尺度参数时，其先验分布不可以用贝叶斯假设作为无信息先验。
+&emsp;&emsp;求无信息先验大致有三种方法：Jeffreys先验,reference先验,概率匹配先验。   
+
+### Jeffreys先验    
+&emsp;&emsp;Jeffreys(1961)用Fisher信息量（阵）给出参数$\theta$的无信息先验。    
+&emsp;&emsp;C-R正则族是Fisher信息量（阵）存在的条件。常用分布族大多属于C-R正则族。
+&emsp;&emsp;无信息先验公式如下
+\[\pi(\theta)=|I(\theta)|^{\frac{1}{2}}\]
+即Fisher信息量（阵）行列式的平方根。    
+
+&emsp;&emsp;例1：设$x_1,\dots,x_n$是来自正态分布$N(\theta,\sigma^2)$的一组样本观察值。
+求参数向量$(\mu,\sigma)$的Jeffreys先验。    
+
+&emsp;&emsp;例2.求二项模型成功概率的Jeffreys先验。    
+
+## 3.弱信息先验   
+&emsp;&emsp;弱信息先验意味着未知参数先验分布的方差很大，也就是关于参数的信息很少，很不确定。
+&emsp;&emsp;比如在正态模型（方差已知）中，$y_i \sim N(\theta,\sigma^2)$，并且$\theta \sim N(\mu,\tau^2)$。
+如果$\tau=100$,则$\tau^2=100^2$,方差就很大了。    
+&emsp;&emsp;也可以设$\tau \sim C(\mu,\lambda)$。因为柯西分布没有期望和方差，被视为弱信息分布。    
+
+# 第三章 &emsp;&emsp; 贝叶斯计算与MCMC 
+## MCMC   
+&emsp;&emsp;贝叶斯统计分析涉及很多积分运算，特别是后验积分的积分运算。    
+&emsp;&emsp;考虑如下积分
+\[\hat {g(\theta)}=\int{g(\theta)\pi(\theta |x)}d\theta\]
+即$g(\theta)$的后验均值$E[(g(\theta)|x)]$。显然，可以用下面的平均值近似求得。
+\[\bar {g}= \frac{1}{m}\sum_{i=1}^{m}g(\theta^{(i)})\]
+其中$\theta^{(1)},\dots,\theta^{(m)}$是来自后验分布$\pi(\theta |x)$的容量为$m$的样本。
+&emsp;&emsp;如果此样本为独立的，则由大数定理，样本均值$\bar {g}$依概率收敛到$E[(g(\theta)|x)]$。这种技术称为蒙特卡洛（Monte Carlo）方法。    
+&emsp;&emsp;但是在有些问题中，从$\pi(\theta |x)$抽取独立的样本非常困难。然而，如果通过某种方法可以获得从
+$\pi(\theta |x)$的一个非独立“样本”（严格地讲是一条链在一些状态下的值），但具有一些好的性质，
+且与从$\pi(\theta |x)$中抽取的独立样本的作用是一样的，那么蒙特卡洛方法仍然可以使用。
+这就是蒙特卡洛马尔科夫链（Monte Carlo Markov Chain，MCMC）。    
+&emsp;&emsp;因此，MCMC就是基于马尔科夫链从目标分布抽取随机“样本”，用平均值估计积分。    
+&emsp;&emsp;单参数模型的抽样比较简单，这里分析多参数模型。    
+&emsp;&emsp;在多参数模型中，一般先考虑是否可以直接得到某参数或参数的函数的后验分布；    
+若无法得到其显式表示，则再考虑是否可以将联合后验分布进行分解，然后进行分步抽样，
+其优点是无需进行收敛性判断。        
+&emsp;&emsp;在分解方法都无法进行时再考虑Gibbs抽样等MCMC方法，但需要对马尔科夫链的收敛性进行判断。   
+&emsp;&emsp;大量复杂的统计模型都用最后一种方法解决，因此具有普遍的意义。       
+
+## Gibbs抽样
+&emsp;&emsp;需要参数的满条件后验分布。    
+&emsp;&emsp;在Gibbs抽样中，称
+\[\pi(\theta_j|\theta_{-j},x)=\frac{\pi(\theta_j|\theta_1,\cdots,\theta_{j-1},\theta_{j+1},\cdots|x)}
+{\int \pi(\theta_j|\theta_1,\cdots,\theta_{j-1},\theta_{j+1},\cdots|x)d{\theta_j}}\]
+为$\theta_j$的满条件后验分布(full conditional distribution)
+
+&emsp;&emsp;假设模型有$p$个参数。   
+&emsp;&emsp;算法如下：       
+&emsp;&emsp;1.给定参数的初始值：$\theta_1^{(0)},\dots,\theta_p^{(0)}$;     
+&emsp;&emsp;2.对$t=0,1,2,\dots$进行下面的迭代更新   
+&emsp;&emsp;a)从分布$\pi(\theta_1|\theta_2^{(t)},\dots,\theta_p^{(t)},x)$中产生$\theta_1^{(t+1)}$;    
+&emsp;&emsp;b)从分布$\pi(\theta_2|\theta_1^{(t)},\theta_3^{(t)},\dots,\theta_p^{(t)},x)$中产生$\theta_2^{(t+1)}$;    
+&emsp;&emsp;$\cdots$      
+&emsp;&emsp;c)从分布$\pi(\theta_p|\theta_1^{(t)},\theta_2^{(t)},\dots,\theta_{p-1}^{(t)},x)$中产生$\theta_2^{(t+1)}$;
+&emsp;&emsp;由此产生马尔科夫链$\theta^{(0)},\theta^{(1)},\cdots,\theta^{(t)},\cdots$。 
+### 例子        
+&emsp;&emsp;$X,Y$服从二元正态分布，联合密度函数为
+\[f(x,y)=\frac{1}{2\pi \sqrt(1-\rho^2)} exp{(-\frac{1 }{2(1-\rho^2) }(x^2-xy+y^2))}\]
+&emsp;&emsp;边缘分布为
+\[X|Y \sim N(\rho y,1-\rho^2)\]
+\[Y|X \sim N(\rho x,1-\rho^2)\]
+```{r}
+# 
+# Function to sample from a bivariate normal distribution
+Gibbs_bivariate_normal <- function(N = 1000, rho = 0,  
+                                   x_0 = -5, y_0 = 4, do.plots = TRUE)
+{
+    # N: number of iterations
+    # rho: correlation
+    # x_0 and y_0: the initial values of the x and y sequences
+    # do.plots: should traceplots and autocorrelation plots be produced
+    # Set up vectors to hold the simulated values
+    x <- rep(NA, N + 1)
+    y <- rep(NA, N + 1)
+    
+    # Set the initial values
+    # Remember, R vectors are indexed from 1
+    
+    x[1] <- x_0
+    y[1] <- y_0
+    
+    # Sample from the appropriate conditional distributions
+
+    for(i in 2:(N  + 1)){
+        # This is where you need to modify the code to sample -ONE- value 
+        # from the appropriate conditional distribution 
+        #
+        x[i] <- rnorm(1,mean = rho*y[i-1],sd=1-rho^2)  
+        y[i] <- rnorm(1,mean = rho*x[i],sd=1-rho^2) 
+    }
+    # Remove burn-in
+    x_ergodic <- x[(N/2 + 1):(N+1)]
+    y_ergodic <- y[(N/2 + 1):(N+1)]
+    # Some plots
+    if(do.plots){
+        #
+        p <- par(mfrow = c(3,2), mar = c(4.1, 5.1, 3.1, 1.1))
+        #
+        plot(0:N, x, xlab = "Iteration i", ylab = expression(x^(i)), type = "l")
+        abline(v = (N/2 + 1) - 0.5 - 1, col = "red", lwd = 2)
+        #
+        plot(0:N, y, xlab = "Iteration i", ylab = expression(y^(i)), type = "l")
+        abline(v = (N/2 + 1) - 0.5 - 1, col = "red", lwd = 2)
+        #
+        plot(((N/2 + 1):(N+1)) - 1, x_ergodic,  xlab = "Iteration i", ylab = expression(x^(i)), sub = "After burn-in", type = "l")
+      
+        #
+        plot(((N/2 + 1):(N+1)) - 1, y_ergodic,  xlab = "Iteration i", ylab = expression(y^(i)), sub = "After burn-in", type = "l")
+        #
+        acf(x_ergodic, main = "Autocorrelation Function of x values\nafter burn-in",
+            lag.max = 15)
+        acf(y_ergodic, main = "Autocorrelation Function of y values\nafter burn-in",
+            lag.max = 15)
+        #
+        par(p)
+        #
+    }
+    #
+    return(list(x = x, y = y, x_ergodic = x_ergodic, y_ergodic = y_ergodic))
+}
+
+g_bvn_0.8 <- Gibbs_bivariate_normal(N = 10000, rho = 0.8,  x_0 = -5, y_0 = 4)
+
+# Save the results in a nice format
+
+x <- g_bvn_0.8$x; y <- g_bvn_0.8$y
+x_ergodic <- g_bvn_0.8$x_ergodic; y_ergodic <- g_bvn_0.8$y_ergodic
+
+# Monte Carlo approximations
+#E[X] = 0,E[Y] = 0;Var[X] = 1,Var[X] = 1
+mean(x_ergodic);mean(y_ergodic)  
+
+var(x_ergodic); var(y_ergodic) 
+
+cor(x_ergodic, y_ergodic) # cor[X, Y] = rho
+
+```
+
+
+
+## MH抽样
+&emsp;&emsp;如果某个满条件分布不容易抽样，则可以借助MH算法进行抽样。    
+&emsp;&emsp;MH算法需要建议分布。    
+&emsp;&emsp;算法如下：    
+&emsp;&emsp;1.构造合适的建议分布$q(\cdot|\theta^{(t)})$;    
+&emsp;&emsp;2.从某个分布$g$中产生$\theta^{(0)}$;    
+&emsp;&emsp;3.重复下面过程，直至马尔科夫链达到平衡状态      
+&emsp;&emsp;a)从$q(\cdot|\theta^{(t)})$中产生候选点$\theta^{'}$;    
+&emsp;&emsp;b)从均匀分布$U(0,1)$中产生U;    
+&emsp;&emsp;c)判断：如果$U \le \frac{\pi(\theta^{'}|x)q(\theta^{(t))}|\theta^{(')})}{\pi(\theta^{(t)}|x)q(\theta^{'}|\theta^{(t)})}$，则接受$\theta^{'}$，并令$\theta^{(t+1)}=\theta^{'}$，否则令$\theta^{(t+1)}=\theta^{(t)}$;    
+&emsp;&emsp;d)增加$t$,返回到a)。    
+&emsp;&emsp;Gibbs抽样法是一种特殊的MH算法，其中的每一个候选点都被接受。   
+&emsp;&emsp;MH算法具有普遍意义。  
+
+### 例子 
+\[\pi(\theta_1,\theta_2)=(\theta_1+\theta_2)/8\]
+\[\pi(\theta_1|\theta_2)=\frac {\theta_1+\theta_2}{2(1+\theta_2)}\]
+\[\pi(\theta_2|\theta_1)=\frac {\theta_1+\theta_2}{2(1+\theta_1)}\]
+\[\alpha=min(1,\frac {q(\theta_1^{(i-1)})\pi(\theta_1^{(cand)}|\theta_2^{(i-1)})}
+{q(\theta_1^{(cand)})\pi(\theta_1^{(i-1)}|\theta_2^{(i-1)})})\]
+&emsp;&emsp;因为$q(\theta_1^{(i-1)})=q(\theta_1^{(cand)})=\frac {1}{b-a}$。所以
+<!-- $\alpah=min(1,\frac{\pi(\theta_1^{(cand)}|\theta_2^{(i-1)})}{\pi(\theta_1^{(i-1)}|\theta_2^{(i-1)})})$ -->
+
+&emsp;&emsp;代码如下：   
+```{r}
+# Code to implement sampling from the simple
+# bivariate probability density function
+#
+# pi(theta_1, theta_2) = (theta_1 + theta_2) / 8
+# theta_1, theta_2 in [0,2]
+pi_theta_1_given_theta_2 <- function(theta_1, theta_2){
+  (theta_1 + theta_2) / (2*(1 + theta_2))
+}
+#
+pi_theta_2_given_theta_1 <- function(theta_2, theta_1){
+  (theta_1 + theta_2) / (2*(1 + theta_1))
+}
+# The Metropolis sampling algorithm
+# using the above conditional probability density functions
+#
+N <- 5000 # We will use a large number of iterations
+#
+# Space for theta_1 and theta_2
+#
+theta_1 <- rep(NA, N + 1)
+theta_2 <- rep(NA, N + 1)
+#
+# Initial values of our choice
+#
+theta_1[1] <- 0.8
+theta_2[1] <- 0.2
+#
+# Metropolis algorithm
+#
+for(i in 2:(N+1)){
+  # theta_1
+  theta_1_cand <- runif(1, 0, 2) # Sample one realization from U[0,2]
+  # Ratio of conditionals
+  ratio <- pi_theta_1_given_theta_2(theta_1_cand, theta_2[i-1]) /
+    pi_theta_1_given_theta_2(theta_1[i-1], theta_2[i-1])
+  #
+  alpha <- min(1, ratio)
+  u <- runif(1, 0, 1)
+  # Decide whether or not to accept the candidate point by generating u from U[0,1]
+  theta_1[i] <- ifelse(u <= alpha, theta_1_cand, theta_1[i-1])
+  # If u <= alpha, accept the candidate point, otherwise do not move
+  # theta_2
+  theta_2_cand <- runif(1, 0, 2) # Sample one realization from U[0,2]
+  # Ratio of conditionals
+  ratio <- pi_theta_2_given_theta_1(theta_2_cand, theta_1[i]) /
+    pi_theta_2_given_theta_1(theta_2[i-1], theta_1[i])
+    # The latest version of theta_1 is used
+  #
+  alpha <- min(1, ratio)
+  #
+  u <- runif(1, 0, 1)
+  # Decide whether or not to accept the candidate point by generating u from U[0,1]
+  theta_2[i] <- ifelse(u <= alpha, theta_2_cand, theta_2[i-1])
+  # If u <= alpha, accept the candidate point, otherwise do not move
+}
+# Extract values from the ergodic phase, after the red line say
+theta_1_ergodic <- theta_1[(N/2 + 1):(N + 1)];theta_2_ergodic <- theta_2[(N/2 + 1):(N + 1)]
+
+# Monte Carlo approximations
+# Random variable means
+mean(theta_1_ergodic);mean(theta_2_ergodic)
+
+# Random variable variances
+var(theta_1_ergodic);var(theta_2_ergodic)
+
+# Random variable standard deviations
+sd(theta_1_ergodic);sd(theta_1_ergodic)
+
+# Correlation between the random variables
+cor(theta_1_ergodic, theta_2_ergodic)
+
+```
+
+
+
+
+
+## 汉密尔顿抽样   
+&emsp;&emsp; MH可能会造成两个问题：    
+&emsp;&emsp; a)如果建议分布是对称的，计算$alpha$会被消掉，可能会花费很长时间才能收敛到平衡分布；            
+&emsp;&emsp; b)MH算法的拒绝率和transition kernel有关，我们希望拒绝率尽量低。       
+Hamiltonian Monte Carlo（HMC）算法能很好的缓解上面的两个问题。        
+  
+&emsp;&emsp; 该方法来自于汉密尔顿动力学。简单来说，物体的能量包括势能(取决于位置x)和动能，从而物理系统可以表示为$H(x,p)$(是个常量)。$x$表示物体位置(position),$p$表示物体的动量(momentum)。该系统满足
+\[\frac{dp}{dt}=-\frac{\partial{H}}{\partial{x}}\]
+\[\frac{dx}{dt}=\frac{\partial{H}}{\partial{p}}\]
+&emsp;&emsp;后验分布为
+\[\pi(\theta_1,\theta_2,\dots,\theta_d|y)\]
+&emsp;&emsp;增加辅助变量$\phi_1,\phi_2,\dots,\phi_d$,其概率密度为$\pi(\theta_1,\theta_2,\dots,\theta_d)$。         
+&emsp;&emsp;联合分布定义为
+\[\pi(\theta_1,\theta_2,\dots,\theta_d,\phi_1,\phi_2,\dots,\phi_d|y):=
+\pi(\theta_1,\theta_2,\dots,\theta_d|y) \pi(\phi_1,\phi_2,\dots,\phi_d)
+\]
+&emsp;&emsp;或者用向量表示为    
+\[\pi(\theta,\phi|y)=\pi(\theta|y)\pi(\phi)\]
+&emsp;&emsp;定义汉密尔顿系统
+\begin{equation}
+\begin{split}
+& H(\pi(\theta_1,\theta_2,\dots,\theta_d,\phi_1,\phi_2,\dots,\phi_d|y):= -log(\pi(\theta,\phi|y))\\
+& =-log(\pi(\theta|y)\pi(\phi))\\
+& =-log(\pi(\theta|y))-log(\pi(\phi))\\
+\end{split}
+\end{equation}
+&emsp;&emsp;第一项表示动量能，第二项表示势能。    
+&emsp;&emsp;应用汉密尔顿方程
+\[\frac{d\phi}{dt}=\frac{\partial (log(\pi(\theta|y))) }{\partial \theta}\]
+\[\frac{d\theta}{dt}=(\frac{d \theta_1}{dt},\frac{d \theta_2}{dt},\cdots,\frac{d \theta_d}{dt})
+=(\frac{\phi_1}{m_1},\frac{\phi_2}{m_2},\cdots,\frac{\phi_d}{m_d},)\]
+&emsp;&emsp;具体算法如下：    
+
+
+&emsp;&emsp;代码如下：
+```{r}
+
+```
+
+
+# 第四章&emsp;&emsp; MCMC与RStan   
+
+## 什么是Rstan？       
+&emsp;&emsp; 目前可用于贝叶斯计算的软件包括WinBUGS, OpenBUGS，JAGS（Just Another Gibbs Sampler）和Stan。WinBUGS和OpenBUGS隶属于BUGS（Bayesian Inference Using Gibbs Sampling）项目。该项目由剑桥大学医学研究委员会生物统计部（The Medical Research Council Biostatistics Unit）主持，启动于1989年。最初的版本是运行在linux上的，后来移植到Windows下发展成为WinBUGS（与帝国理工医学院合作）。WinBUGS已经停止更新，上一次发布是在2007年8月。OpenBUGS是赫尔辛基大学开发的WinBUGS的开源版本，最后一次发布是在2014年。JAGS是英国华威大学 Martyn Plummer基于BUGS语言开发的。Stan项目以提出蒙特卡洛方法的 Stanislaw Ulam命名，由哥伦比亚大学的Andrew Gelman带领团队开发。       
+&emsp;&emsp; Stan和JAGS可以用于相同的问题，但两者有着显著不同。JAGS是BUGS的变体，类似于WinBUGS和OpenBUGS，模型仅说明变量之间的关系。而Stan里的模型被明确定义为几个部分，其中语句的顺序对执行是有影响的。WinBUGS和OpenBUGS都是用Component Pascal编写的，这是一种小众语言，开发难度很大。JAGS和Stan都用C++编写。而且JAGS和Stan都是跨平台的，也可以在64-bit平台上以64-bit应用来进行编译。因此，初学者的选择无非是JAGS抑或Stan。        
+&emsp;&emsp; RStan是Stan的R接口。它有个对应的“rstan”包在CRAN上发布，其源代码托管在GitHub上。        
+
+## Rstan的结构        
+&emsp;&emsp; 基于RStan求解贝叶斯模型的流程如下：   
+&emsp;&emsp; ①指定环境   
+```{r}
+library(rstan) 		#加载包   
+options(mc.cores = parallel::detectCores())		#并行估计模型     
+rstan_options(auto_write = TRUE) 		#将已编译的Stan程序保存到硬盘上  
+```
+&emsp;&emsp; 后两行代码不是必需的，但可以在一定程度上提高运行速度。    
+&emsp;&emsp; ②编写一个Stan程序   
+&emsp;&emsp; 通过使用Stan建模语言编写其对数后验密度来表示统计模型。可以使用带有.stan扩展名的文本文件。也可以使用R中的字符串来完成，并以文本文件写入硬盘。    
+&emsp;&emsp; Stan程序一般分为三个模块：data、parameters和model。data需要定义两类：样本容量n和数据。parameters模块指定未知参数。model指定变量分布，可以用分布表示，也可以用似然函数表示。如果需要用转换后的数据（比如取对数）估计数据，就需要增加一个模块transformed data。如果需要对未知参数进行转换，则需要增加一个模块transformed parameters表示原始参数与转换参数的联系。有时还会增加一个模块generated quantities。任何可以根据模型计算出来的结果都可以在这里进行评估（比如R2）。更重要的是，它和其他参数一样，有一个分布。   
+&emsp;&emsp;考虑一个简单的例子：样本$y=(y_1,\cdots,y_n)$取自正态总体$Y \sim N(\mu,\sigma^2)$。参数$\mu$的分布已知$\mu \sim N(0,5^2)$。    
+
+Stan代码如下(R版本是4.1.0，Rtool版本是4.0：
+```{r message=FALSE,warning=FALSE}
+
+mystan <- "
+data {
+  int < lower = 1 > n; 
+  vector[n] y; 
+}
+parameters {
+  real mu; 
+}
+model {
+// priors
+  mu ~ normal(0.0, 5); 
+// likelihood
+  y ~ normal(mu, 2);
+}
+"
+write(mystan,file = "mystan.stan")  #写入硬盘
+
+```
+
+&emsp;&emsp; 需要指出的是，Stan中的赋值是 =，而分布用～指定，注释用//或者\* \*指定。注意，与教材正态分布的表示不同，RStan语句里的normal(·, ·)第二个参数表示的是标准差，而不是方差。   
+
+&emsp;&emsp; ③准备数据（通常是一个列表）        
+&emsp;&emsp; data_for_Stan <- list(y = y, n = length(y))        
+&emsp;&emsp; ④拟合模型并汇总        
+&emsp;&emsp; fit <- stan(file = "mystan.stan", data = data_for_Stan)        
+&emsp;&emsp; fit从函数返回的对象是类stan的S4对象stanfit。       
+&emsp;&emsp; ⑤诊断与其他        
+&emsp;&emsp; 可以使用典型的贝叶斯诊断工具，如轨迹图、密度图等。此外rstan包带有模型比较功能，如WAIC和loo函数。        
+
+## 一个例子       
+
