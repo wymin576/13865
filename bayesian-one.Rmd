@@ -9,7 +9,8 @@ documentclass: ctexart
 ---
 
 # 第一章 &emsp;&emsp; 贝叶斯统计简介   
-## 1.什么是贝叶斯统计   
+## 1.什么是贝叶斯统计 
+
 &emsp;&emsp;英国学者Thomas Bayes在其论文《Essay towards solving a problem in the doctrine of chances》中提出的一种归纳推理理论，后被一些统计学者发展为一种系统的统计推断方法，称为贝叶斯方法。     
 认为贝叶斯方法是唯一合理的统计推断方法的统计学者组成数理统计学中的贝叶斯学派，其形成可追溯到 20世纪30年代。二战以后发展为一个有影响的学派。  
 
@@ -314,13 +315,16 @@ cor(x_ergodic, y_ergodic) # cor[X, Y] = rho
 &emsp;&emsp;MH算法具有普遍意义。  
 
 ### 例子 
+&emsp;&emsp;假设参数$\theta_1,\theta_2$服从二元正态分布
 \[\pi(\theta_1,\theta_2)=(\theta_1+\theta_2)/8\]
+&emsp;&emsp;我们可以分别得到两个参数的边缘分布
 \[\pi(\theta_1|\theta_2)=\frac {\theta_1+\theta_2}{2(1+\theta_2)}\]
 \[\pi(\theta_2|\theta_1)=\frac {\theta_1+\theta_2}{2(1+\theta_1)}\]
+&emsp;&emsp;从一个建议分布（proposal distribution）产生备选点，是否接受这个点的概率为
 \[\alpha=min(1,\frac {q(\theta_1^{(i-1)})\pi(\theta_1^{(cand)}|\theta_2^{(i-1)})}
 {q(\theta_1^{(cand)})\pi(\theta_1^{(i-1)}|\theta_2^{(i-1)})})\]
 &emsp;&emsp;因为$q(\theta_1^{(i-1)})=q(\theta_1^{(cand)})=\frac {1}{b-a}$。所以
-<!-- $\alpah=min(1,\frac{\pi(\theta_1^{(cand)}|\theta_2^{(i-1)})}{\pi(\theta_1^{(i-1)}|\theta_2^{(i-1)})})$ -->
+$\alpha=min(1,\frac{\pi(\theta_1^{(cand)}|\theta_2^{(i-1)})}{\pi(\theta_1^{(i-1)}|\theta_2^{(i-1)})})$
 
 &emsp;&emsp;代码如下：   
 ```{r}
