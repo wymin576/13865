@@ -7,7 +7,48 @@ date: "2022-12-31"
 geometry: margin=2cm
 documentclass: ctexart
 ---
+# 第0章 R语言编程  
+## 对象
 
+&emsp;&emsp;表1 常用共轭先验分布
+\begin{tabular}{ccc}
+\hline
+ & 同质性对象 & 异质性对象 \\
+\hline
+1d & atomic vectors & list \\
+2d& matrix & dataframe \\
+3d & array &  \\
+
+\hline
+\end{tabular}
+## 函数表       
+the first function to learn
+   ?, str
+important operators and assignment
+   %in%, match, =, <-, «-, $, [, [[, head, tail, subset, with, assign, get
+comparison
+   all.equal, identical, !=, ==, >, >=, <, <=, is.na, complete.cases, is.finite
+basic math
+   *, +, -，/, ˆ, %%, %/%, abs, sign, acos, asin, atan, atan2, sin, cos, tan, ceiling, floor, round, trunc,
+signif, exp, log, log10, log2, sqrt, max, min, p rod, sum, cummax, cummin, cumprod, cumsum, diff, pmax,
+pmin, range, mean, median, cor, sd, var, rle
+functions to do with functions
+   function, missing, on.exit, return, invisible
+
+logical & sets
+   &, |, !, xor, all, any, intersect, union, setdiff, setequal, which
+vectors and matrices
+   c, matrix
+automatic coercion rules character > numeric > logical
+   length, dim, ncol, nrow, cbind, rbind, names, colnames, rownames, t, diag, sweep, as.matrix, data.matrix
+making vectors
+   c, rep, rep_len, seq, seq_len, seq_along, rev, sample, choose, factorial, combn, (is/as).(character/numeric/logical/. . . )
+lists & data.frame
+   list, unlist, data.frame, as.data.frame, split, expand.grid
+control flow
+   if, &&, ||, for, while, next, break, switch, ifelse
+apply & friends
+   lapply, sapply, vapply, apply, tapply, replicate
 # 第一章 &emsp;&emsp; 贝叶斯统计简介   
 ## 1.什么是贝叶斯统计 
 
@@ -436,7 +477,8 @@ Hamiltonian Monte Carlo（HMC）算法能很好的缓解上面的两个问题。
 \[\frac{d\phi}{dt}=\frac{\partial (log(\pi(\theta|y))) }{\partial \theta}\]
 \[\frac{d\theta}{dt}=(\frac{d \theta_1}{dt},\frac{d \theta_2}{dt},\cdots,\frac{d \theta_d}{dt})
 =(\frac{\phi_1}{m_1},\frac{\phi_2}{m_2},\cdots,\frac{\phi_d}{m_d},)\]
-&emsp;&emsp;具体算法如下：    
+&emsp;&emsp;具体算法如下：   
+
 
 
 &emsp;&emsp;代码如下：
