@@ -381,9 +381,9 @@ for(i in 2:(N+1)){
   u <- runif(1, 0, 1)
   # Decide whether or not to accept the candidate point by generating u from U[0,1]
   theta_2[i] <- ifelse(u <= alpha, theta_2_cand, theta_2[i-1])
-  # If u <= alpha, accept the candidate point, otherwise do not move
+# If u <= alpha, accept the candidate point, otherwise do not move
 }
-# Extract values from the ergodic phase, after the red line say
+# Extract values from the ergodic phase
 theta_1_ergodic <- theta_1[(N/2 + 1):(N + 1)];theta_2_ergodic <- theta_2[(N/2 + 1):(N + 1)]
 
 # Monte Carlo approximations
