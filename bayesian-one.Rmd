@@ -222,12 +222,18 @@ P(\theta|x) \propto \pi(\theta)L
 ## 2.无信息先验  
 
 **如果没有先验信息，如何确定先验分布？**    
-&emsp;&emsp;Bayes用的是贝叶斯假设，就是拉普拉斯先验。什么场合可使用贝叶斯假设？
-如果不能使用贝叶斯假设，无信息先验又如何确定？
+&emsp;&emsp;Bayes用的是贝叶斯假设，就是拉普拉斯先验。什么场合可使用贝叶斯假设？    
+
+如果不能使用贝叶斯假设，无信息先验又如何确定？    
+
 &emsp;&emsp;首先要知道该参数$\theta$在总体分布中的地位，是位置参数，还是尺度参数？    
+
 &emsp;&emsp;根据参数在分布的地位选用适当变换下的不变性来确定其无信息先验。
+
 &emsp;&emsp;当$\theta$为位置参数时，其先验分布可用贝叶斯假设作为无信息先验。    
+
 &emsp;&emsp;当$\theta$为尺度参数时，其先验分布不可以用贝叶斯假设作为无信息先验。
+
 &emsp;&emsp;求无信息先验大致有三种方法：Jeffreys先验,reference先验,概率匹配先验。   
 
 ### *Jeffreys先验 *   
@@ -251,7 +257,7 @@ P(\theta|x) \propto \pi(\theta)L
 
 # 第三章 &emsp;&emsp; 贝叶斯计算与MCMC 
 
-## MCMC   
+## 什么是MCMC   
 &emsp;&emsp;贝叶斯统计分析涉及很多积分运算，特别是后验积分的积分运算。    
 &emsp;&emsp;考虑如下积分
 \[\hat {g(\theta)}=\int{g(\theta)\pi(\theta |x)}d\theta\]
@@ -724,4 +730,60 @@ fit_jeffreys <- stan(file = "mystan_jeffreys.stan", data = data_for_Stan)
 fit_jeffreys
 ```
 
+# 第五章 贝叶斯决策              
+
+## 1.决策问题三要素       
+
+1.状态集 $\Theta=\{\theta \}$     
+&emsp;&emsp;状态集$\Theta$ 可以只含有限个状态，也可以含有无穷个状态。   
+&emsp;&emsp;状态可以用实数表示，此时状态称为状态参数，简称为参数。 
+状态集$\Theta$ 常由一些实数组成，这样的状态集又称为参数空间。   
+常见的参数空间是一个区间（a，b）。
+
+2.行动集$\mathscr{A}=\{a\}$      
+&emsp;&emsp;一般行动集至少有两个行动，供人们决策只用。
+
+3.损失函数$L(\theta,a)$  
+&emsp;&emsp;在一个决策问题中假设状态集为$\Theta=\{\theta\}$,行动集为$\mathscr{A}=\{a\}$，而定义在$\Theta\times\mathscr{A}$ 上的二元函数$L(\theta,a)$称为损失函数。   
+
+&emsp;&emsp;由收益函数容易获得损失函数。当自然界（或社会）处于$\theta$时，最大收益为$\max_{a \in \mathscr{A}} Q(\theta,a)$,此时采取行动a所引起的损失为
+\[L(\theta,a)= \max_{a \in \mathscr{A}} Q(\theta,a)- Q(\theta,a)\]
+
+&emsp;&emsp;类似地，当决策用支付函数$W(\theta,a)$度量时，由于它时越小越好，自然界（或社会）处于$\theta$时的最小支付为\[\min_{a \in \mathscr{A}} W(\theta,a)\]
+
+
+## 2.贝叶斯决策问题       
+&emsp;&emsp;仅使用先验信息的决策问题称为**无数据（或无样本信息）的决策问题**。    
+&emsp;&emsp;仅使用抽样信息的决策问题称为**统计决策问题**。    
+&emsp;&emsp;先验信息和抽样信息都用的决策问题称为**贝叶斯决策问题**。    
+
+## 3.决策函数       
+&emsp;&emsp;*定义*: 在给定的贝叶斯决策问题中D={$\delta(x)$}是其决策函数类，则称
+\[R(\delta|x)=E^{\theta|x}[L(\theta,\delta(x))],x \in \chi,theta \in \Theta\] 
+&emsp;&emsp;为决策函数$\delta=\delta(x)$的后验风险。假如在决策函数类D中存在这样的决策函数$\delta'=\delta'(x)$,它在D中具有最小的后验风险，即
+\[R(\delta'|x)= \min_{\delta \in D} R(\delta(x)|x)\]
+&emsp;&emsp;则称$\delta'(x)$为后验风险准则下的最优决策函数，或称*贝叶斯决策函数，或贝叶斯解*。   
+&emsp;&emsp;当参数空间$\Theta$与行动集$\mathscr{A}$ 相同，均为某个实数集时，满足上式的$\delta'(x)$又称为$\theta$的贝叶斯解或贝叶斯估计。    
+&emsp;&emsp;这里应着重强调的是定义2.2.2中的前提，即在给定贝叶斯决策问题中讨论贝叶斯解或贝叶斯估计。所谓“给定贝叶斯决策问题”主要是指给定如下三个前提：    
+&emsp;&emsp;样本$x$的联合密度函数$p(x|\theta)$;
+&emsp;&emsp;参数空间$\Theta$上的先验分布$\pi(\theta)$;
+&emsp;&emsp;定义在$\Theta \times \mathscr{A}$上的损失函数$L(\theta,a)$。
+
+&emsp;&emsp;另外，从贝叶斯统计看，一个贝叶斯决策问题比一个贝叶斯推断问题多一个损失函数。或者说，把损失函数引进统计推断就构成贝叶斯决策问题。这样就把贝叶斯推断与经济效益联系起来了。以后按后验平均损失越小越好来进行统计推断，从而形成贝叶斯决策。
+
+## 4.例子       
+&emsp;&emsp;某制药厂制成一种新的止痛剂。为了决定新药是否投放市场，投放多少，价格如何等问题，需要了解此种新的止痛剂在市场的占有率$\theta$。
+假如厂长采用[0,1]上的均匀分布作为$\theta$的先验分布;    
+如果从特约经销店得知，在$n$个购买止痛剂的顾客中有$x$人买了新的止痛剂。这是$X \sim b(n,\theta)$。   
+&emsp;&emsp;损失函数是线性的
+\[ L(\theta,\delta) = \left \{
+\begin{array}{rl}
+\delta-\theta, &  0 < \theta<\delta \\
+\theta-\delta, &  \delta \leq \theta \leq 1
+\end{array} \right.
+\]
+&emsp;&emsp;药厂厂长对市场占有率$\theta$无任何先验信息。另外在市场调查中，在n个购买止痛剂的顾客中又$x$人买了新的止痛剂，这时可得$\theta$的后验分布
+\[\theta |x \sim Be(x+1,n-x+1)\]
+&emsp;&emsp;在后验风险准则下对$\theta$做出贝叶斯估计。
+      
 
