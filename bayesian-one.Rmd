@@ -1,12 +1,14 @@
 ---
 title: "贝叶斯统计"
 author: "汪燕敏"
-organization: "安徽财经大学统计与应用数学学院"
+# organization: "安徽财经大学统计与应用数学学院"
 output: pdf_document
 date: "2022-12-31"
 geometry: margin=2cm
 documentclass: ctexart
 ---
+
+
 # 第0章 R语言编程  
 ## 对象
 
@@ -21,34 +23,36 @@ documentclass: ctexart
 
 \hline
 \end{tabular}
-## 函数表       
-the first function to learn
-   ?, str
-important operators and assignment
-   %in%, match, =, <-, «-, $, [, [[, head, tail, subset, with, assign, get
-comparison
-   all.equal, identical, !=, ==, >, >=, <, <=, is.na, complete.cases, is.finite
-basic math
-   *, +, -，/, ˆ, %%, %/%, abs, sign, acos, asin, atan, atan2, sin, cos, tan, ceiling, floor, round, trunc,
+## 函数表               
+### the first function to learn               
+&emsp;&emsp; ?, str       
+### important operators and assignment               
+&emsp;&emsp; %in%, match, =, <-, «-, $, [, [[, head, tail, subset, with, assign, get       
+### comparison           
+&emsp;&emsp; all.equal, identical, !=, ==, >, >=, <, <=, is.na, complete.cases, is.finite       
+### basic math           
+&emsp;&emsp; *, +, -，/, ˆ, %%, %/%, abs, sign, acos, asin, atan, atan2, sin, cos, tan, ceiling, floor, round, trunc,
 signif, exp, log, log10, log2, sqrt, max, min, p rod, sum, cummax, cummin, cumprod, cumsum, diff, pmax,
 pmin, range, mean, median, cor, sd, var, rle
 functions to do with functions
-   function, missing, on.exit, return, invisible
+&emsp;&emsp; function, missing, on.exit, return, invisible        
 
-logical & sets
-   &, |, !, xor, all, any, intersect, union, setdiff, setequal, which
-vectors and matrices
-   c, matrix
-automatic coercion rules character > numeric > logical
-   length, dim, ncol, nrow, cbind, rbind, names, colnames, rownames, t, diag, sweep, as.matrix, data.matrix
-making vectors
-   c, rep, rep_len, seq, seq_len, seq_along, rev, sample, choose, factorial, combn, (is/as).(character/numeric/logical/. . . )
-lists & data.frame
-   list, unlist, data.frame, as.data.frame, split, expand.grid
-control flow
-   if, &&, ||, for, while, next, break, switch, ifelse
-apply & friends
-   lapply, sapply, vapply, apply, tapply, replicate
+### logical & sets                           
+&emsp;&emsp; &, |, !, xor, all, any, intersect, union, setdiff, setequal, which       
+### vectors and matrices        
+&emsp;&emsp; c, matrix
+### automatic coercion rules character > numeric > logical                
+&emsp;&emsp; length, dim, ncol, nrow, cbind, rbind, names, colnames, rownames, t, diag, sweep, as.matrix, data.matrix
+### making vectors        
+&emsp;&emsp; c, rep, rep_len, seq, seq_len, seq_along, rev, sample, choose, factorial, combn, (is/as).(character/numeric/logical/. . . )       
+### lists & data.frame        
+&emsp;&emsp; list, unlist, data.frame, as.data.frame, 
+split, expand.grid        
+### control flow        
+&emsp;&emsp; if, &&, ||, for, while, next, break, switch, ifelse        
+### apply & friends       
+&emsp;&emsp; lapply, sapply, vapply, apply, tapply, replicate       
+
 # 第一章 &emsp;&emsp; 贝叶斯统计简介   
 ## 1.什么是贝叶斯统计 
 
