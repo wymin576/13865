@@ -2,7 +2,9 @@
 title: "贝叶斯统计"
 author: "汪燕敏"
 date: "2023-01-13"
-output: html_document
+output:
+  html_document:
+    df_print: paged
 geometry: margin=2cm
 documentclass: ctexart
 ---
@@ -19,7 +21,7 @@ documentclass: ctexart
 # 第0章 R语言编程
 ## 对象
 
-&emsp;&emsp;表1 常用共轭先验分布
+&emsp;&emsp;表1 R语言主要对象
 
  |  | 同质性对象 | 异质性对象 |
 |----|----|----|
@@ -45,7 +47,8 @@ documentclass: ctexart
 &emsp;&emsp; *, +, -，/, ^, %%, %/%, abs, sign, acos, asin, atan, atan2, sin, cos, tan, ceiling, floor, round, trunc,
 signif, exp, log, log10, log2, sqrt, max, min, p rod, sum, cummax, cummin, cumprod, cumsum, diff, pmax,
 pmin, range, mean, median, cor, sd, var, rle
-functions to do with functions
+### functions to do with functions
+
 &emsp;&emsp; function, missing, on.exit, return, invisible
 
 ### logical & sets        
@@ -118,12 +121,16 @@ P(\theta|x) \propto \pi(\theta)L
 &emsp;&emsp;于是
 \[p(\theta|x) \propto L*\pi(\theta) \propto \theta^{2-1}(1-\theta)^{10-1}*1\]
 
-&emsp;&emsp;这是贝塔分布$Be(2,10)$密度函数的*核*。因此根据密度函数的正则性可以推出$\theta|x \sim Be(2,10)$.  
+&emsp;&emsp;这是贝塔分布$Be(2,10)$密度函数的*核*。因此根据密度函数的正则性可以推出$\theta|x \sim Be(2,10)$。    
+
 &emsp;&emsp;如果点估计取期望，则$\hat \theta= \frac {2}{12}$；    
 &emsp;&emsp;如果点估计取众数(mode),则$\hat \theta= \frac {1}{10}$,与极大似然估计值相同。     
  
 &emsp;&emsp;贝叶斯方法的目标是求参数的分布。给定特定的先验（共轭），可以直接得到后验分布。
-&emsp;&emsp;如果不是共轭先验呢？后验分布的密度函数可以写出，但不是已知分布，往往涉及大量的积分运算。  &emsp;&emsp;由贝叶斯定理，更新后的分布用后验分布表示为  
+
+&emsp;&emsp;如果不是共轭先验呢？后验分布的密度函数可以写出，但不是已知分布，往往涉及大量的积分运算。 
+
+&emsp;&emsp;由贝叶斯定理，更新后的分布用后验分布表示为  
 \begin{equation}
 \pi (\theta|x)=\frac {\pi(\theta) p(x|\theta)}{\int \pi(\theta) p(x|\theta) d \theta}
 \end{equation}
@@ -132,6 +139,7 @@ P(\theta|x) \propto \pi(\theta)L
 \hat{g(\theta)}=\frac {\int g(\theta) \pi(\theta) p(x|\theta)d \theta}{\int \pi(\theta) p(x|\theta) d \theta}
 \end{equation}
 &emsp;&emsp;这时候，MCMC登场了。也就是用*随机模拟*的方法获得后验分布。    
+
 &emsp;&emsp;因此，如果说经典统计偏向*数学方法*，那么贝叶斯统计则偏向*模拟方法*。
 
 
@@ -250,9 +258,11 @@ P(\theta|x) \propto \pi(\theta)L
 
 ## 3.弱信息先验   
 &emsp;&emsp;弱信息先验意味着未知参数先验分布的方差很大，也就是关于参数的信息很少，很不确定。
+
 &emsp;&emsp;比如在正态模型（方差已知）中，$y_i \sim N(\theta,\sigma^2)$，并且$\theta \sim N(\mu,\tau^2)$。
 如果$\tau=100$,则$\tau^2=100^2$,方差就很大了。    
-&emsp;&emsp;也可以设$\tau \sim C(\mu,\lambda)$。因为柯西分布没有期望和方差，被视为弱信息分布。    
+
+&emsp;&emsp;也可以设$\tau \sim C(\mu,\lambda)$。因为柯西分布没有期望和方差，被视为弱信息分布。当参数非负时，经常采用半柯西分布。    
 
 
 # 第三章 &emsp;&emsp; 贝叶斯计算与MCMC 
@@ -263,7 +273,7 @@ P(\theta|x) \propto \pi(\theta)L
 \[\hat {g(\theta)}=\int{g(\theta)\pi(\theta |x)}d\theta\]
 即$g(\theta)$的后验均值$E[(g(\theta)|x)]$。显然，可以用下面的平均值近似求得。
 \[\bar {g}= \frac{1}{m}\sum_{i=1}^{m}g(\theta^{(i)})\]
-其中$\theta^{(1)},\dots,\theta^{(m)}$是来自后验分布$\pi(\theta |x)$的容量为$m$的样本。
+&emsp;&emsp;其中$\theta^{(1)},\dots,\theta^{(m)}$是来自后验分布$\pi(\theta |x)$的容量为$m$的样本。
 &emsp;&emsp;如果此样本为独立的，则由大数定理，样本均值$\bar {g}$依概率收敛到$E[(g(\theta)|x)]$。这种技术称为蒙特卡洛（Monte Carlo）方法。    
 &emsp;&emsp;但是在有些问题中，从$\pi(\theta |x)$抽取独立的样本非常困难。然而，如果通过某种方法可以获得从
 $\pi(\theta |x)$的一个非独立“样本”（严格地讲是一条链在一些状态下的值），但具有一些好的性质，
@@ -272,7 +282,7 @@ $\pi(\theta |x)$的一个非独立“样本”（严格地讲是一条链在一�
 &emsp;&emsp;因此，MCMC就是基于马尔科夫链从目标分布抽取随机“样本”，用平均值估计积分。    
 &emsp;&emsp;单参数模型的抽样比较简单，这里分析多参数模型。    
 &emsp;&emsp;在多参数模型中，一般先考虑是否可以直接得到某参数或参数的函数的后验分布；    
-若无法得到其显式表示，则再考虑是否可以将联合后验分布进行分解，然后进行分步抽样，
+&emsp;&emsp;若无法得到其显式表示，则再考虑是否可以将联合后验分布进行分解，然后进行分步抽样，
 其优点是无需进行收敛性判断。        
 &emsp;&emsp;在分解方法都无法进行时再考虑Gibbs抽样等MCMC方法，但需要对马尔科夫链的收敛性进行判断。   
 &emsp;&emsp;大量复杂的统计模型都用最后一种方法解决，因此具有普遍的意义。       
@@ -292,8 +302,11 @@ $\pi(\theta |x)$的一个非独立“样本”（严格地讲是一条链在一�
 &emsp;&emsp;b)从分布$\pi(\theta_2|\theta_1^{(t)},\theta_3^{(t)},\dots,\theta_p^{(t)},x)$中产生$\theta_2^{(t+1)}$;    
 &emsp;&emsp;$\cdots$      
 &emsp;&emsp;c)从分布$\pi(\theta_p|\theta_1^{(t)},\theta_2^{(t)},\dots,\theta_{p-1}^{(t)},x)$中产生$\theta_2^{(t+1)}$;
+
 &emsp;&emsp;由此产生马尔科夫链$\theta^{(0)},\theta^{(1)},\cdots,\theta^{(t)},\cdots$。 
-### 例子        
+
+### 例子 
+
 &emsp;&emsp;$X,Y$服从二元正态分布，联合密度函数为
 \[f(x,y)=\frac{1}{2\pi \sqrt(1-\rho^2)} exp{(-\frac{1 }{2(1-\rho^2) }(x^2-xy+y^2))}\]
 &emsp;&emsp;边缘分布为
@@ -380,7 +393,8 @@ cor(x_ergodic, y_ergodic) # cor[X, Y] = rho
 &emsp;&emsp;Gibbs抽样法是一种特殊的MH算法，其中的每一个候选点都被接受。   
 &emsp;&emsp;MH算法具有普遍意义。 
 
-###例1        
+###例1    
+
 投掷硬币，正面为1，反面为0。得到的数据为(1,1,1,1,1,1,1,1,1,1,1,0,0,0)。用MH方法估计正面的概率。
 
 ```{r cached = TRUE}
@@ -512,7 +526,7 @@ cor(theta_1_ergodic, theta_2_ergodic)
 
 
 ### 例3        
-有两个硬币，一个来自加拿大，一个来自印度。$\theta_1,\theta_2$分别是两硬币出现人头的概率。        
+&emsp;&emsp;有两个硬币，一个来自加拿大，一个来自印度。$\theta_1,\theta_2$分别是两硬币出现人头的概率。        
 \[p(\theta_1,\theta_2) = p(\theta_1) p(\theta_2) \]
 \[p(y_1|\theta_1,\theta_2) = p(y_1|\theta_1), p(y_2|\theta_1,\theta_2)p(y_2|\theta_2)\]
 \[p(D|\theta_1,\theta_2)=\prod _{y_{1i}\in D_1}p(y_{1i}|\theta_1,\theta_2)\prod _{y_{2i}\in D_2}p(y_{2i}|\theta_1,\theta_2)\]
@@ -539,12 +553,12 @@ return(prior)
 target = function(theta){
 target = likelihood(theta)*prior(theta)
 }
-trajlength = 10^3
+trajlength = 10^4
 trajectory = matrix(0,nrow = trajlength, ncol = 2)
 trajectory[1,]=c(0.5,0.5)
 nAccepted = 0
 set.seed(12345)
-covmat = matrix(c(0.2^2,0,0,0.2^2),nrow=2, ncol=2);covmat
+covmat = matrix(c(0.2^2,0,0,0.2^2),nrow=2, ncol=2)
 for (i in 1:(trajlength-1)){
   current = trajectory[i,]
   proposal = MASS::mvrnorm(n = 1,mu = current,Sigma = covmat)
@@ -564,7 +578,7 @@ sdTraj <- apply(theta_ergodic,2,sd);sdTraj
 
 ## 汉密尔顿抽样   
 &emsp;&emsp; MH可能会造成两个问题：    
-&emsp;&emsp; a)如果建议分布是对称的，计算$alpha$会被消掉，可能会花费很长时间才能收敛到平衡分布；            
+&emsp;&emsp; a)如果建议分布是对称的，计算$\alpha$时会被消掉，可能会花费很长时间才能收敛到平衡分布；            
 &emsp;&emsp; b)MH算法的拒绝率和transition kernel有关，我们希望拒绝率尽量低。       
 Hamiltonian Monte Carlo（HMC）算法能很好的缓解上面的两个问题。        
   
@@ -598,8 +612,241 @@ Hamiltonian Monte Carlo（HMC）算法能很好的缓解上面的两个问题。
 
 
 &emsp;&emsp;代码如下：
-```{r}
+```{r cached = TRUE}
+# Plot the probability density function
+bivariate_normal_pdf <- function(theta_1, theta_2, rho){
+  exp(-(theta_1^2 - 2 * rho * theta_1 * theta_2 + theta_2^2) / (2 * (1 - rho^2))) / (2 * pi * sqrt(1 - rho^2))
+}
 
+bivariate_normal_pdf_log <- function(theta_1, theta_2, rho){
+  # Please note: additive constant removed
+  -(theta_1^2 - 2 * rho * theta_1 * theta_2 + theta_2^2) / (2 * (1 - rho^2))
+  #
+}
+# Derivatives (hand coded)
+d_log_pdf_d_theta_1 <- function(theta_1, theta_2, rho){
+  - (theta_1 - rho * theta_2) / (1 - rho^2)
+}
+
+d_log_pdf_d_theta_2 <- function(theta_1, theta_2, rho){
+  #
+  - (theta_2 - rho * theta_1) / (1 - rho^2)
+}
+
+plot_bivariate_normal_pdf <- function(rho, 
+                                      n_theta_1 = 100,
+                                      n_theta_2 = 100,
+                                      theta_1_lim = c(-3,3),
+                                      theta_2_lim = c(-3,3),
+                                      n_levels = 25,
+                                      col = "black", add = FALSE){
+  # Sequences of points
+  theta_1_seq <- seq(from = theta_1_lim[1],
+                     to = theta_1_lim[2],
+                     length = n_theta_1)
+
+  theta_2_seq <- seq(from = theta_2_lim[1],
+                     to = theta_2_lim[2],
+                     length = n_theta_2)
+
+  f_mat <- matrix(NA, 
+                  nrow = n_theta_1,
+                  ncol = n_theta_2)
+
+  for(i in 1:n_theta_1){
+    for(j in 1:n_theta_2){
+      f_mat[i,j] <- bivariate_normal_pdf(theta_1_seq[i], theta_2_seq[j], rho)
+    }
+  }
+
+  contour(theta_1_seq,
+          theta_2_seq,
+          f_mat,
+          xlab = expression(theta[1]),
+          ylab = expression(theta[2]),
+          nlevels = n_levels,
+          col = col,
+          add = add)
+}
+# Check
+par(mfrow=c(1,3))
+plot_bivariate_normal_pdf(rho = 0.8)      
+plot_bivariate_normal_pdf(rho = 0.0)
+plot_bivariate_normal_pdf(rho = -0.8)
+
+# Now the Hamiltonian Monte Carlo algorithm
+log_pdf_momentum <- function(phi_1, phi_2, 
+                             sigma_1, sigma_2){
+  dnorm(phi_1, 0, sigma_1, log = TRUE) + dnorm(phi_2, 0, sigma_2, log = TRUE)
+}
+
+HMC_bivariate_normal <- function(rho = 0.8,
+                                 niter = 1000,
+                                 theta_1_initial = 6,
+                                 theta_2_initial = 6,
+                                 theta_1_lim = c(-6,6),
+                                 theta_2_lim = c(-6,6),
+                                 L = 20,
+                                 epsilon = 0.3,
+                                 sigma_1 = 1,
+                                 sigma_2 = 1,
+                                 plot_first_number = 30,
+                                 col = "black") {
+  # rho: correlation of bivariate normal distribution from which we want to sample
+  # niter: number of algorithm iterations
+  # theta_1_initial, theta_2_initial: initial values for theta_1 and theta_2
+  # L: number of leapfrog iterations
+  # epsilon: step size for updates of phi and theta
+  # sigma_1, sigma_2: tuning paramters for the update of phi_1 and phi_2
+  # sigma_1^2 = M_1 of the notes, sigma_2^2 = M_2 of the notes
+  # plot_first_number: show this nuber on a plot
+  # col: colour for contour plot
+  # Space
+  theta_1_vec <- rep(NA, niter + 1) # Space for initial value
+  theta_2_vec <- rep(NA, niter + 1) # Space for initial value
+  #
+  phi_1_vec <- rep(NA, niter + 1)
+  phi_2_vec <- rep(NA, niter + 1)
+  #
+  phi_1_consequence <- rep(NA, niter + 1)
+  phi_2_consequence <- rep(NA, niter + 1)
+  # The matrix M
+  M <- diag(c(sigma_1^2, sigma_2^2))
+  M_inv <- diag(c(1 / sigma_1^2, 1 / sigma_2^2))
+  # Initialize theta values
+  theta_1_vec[1] <- theta_1_initial
+  theta_2_vec[1] <- theta_2_initial
+  # Save these values in theta_1 and theta_2 for later updating
+  theta_1 <- theta_1_vec[1]
+  theta_2 <- theta_2_vec[1]
+  # ***** Hamiltonian updates *****
+  # Record the number of acceptance
+  no_accept <- 0
+
+  for(i in 2:(niter + 1)){
+    # Update phi
+    phi_1 <- rnorm(1, 0, sigma_1)
+    phi_2 <- rnorm(1, 0, sigma_2)
+    # Save the old point for later use 
+    # in the accept/reject step
+    theta_1_old <- theta_1_vec[i - 1]
+    theta_2_old <- theta_2_vec[i - 1]
+    #
+    phi_1_old <- phi_1
+    phi_2_old <- phi_2
+    # Leapfrog
+    for(l in 1:L){
+      # Half step for phi (can be vectorized)
+      phi_1 <- phi_1 + epsilon * d_log_pdf_d_theta_1(theta_1, theta_2, rho) / 2
+      phi_2 <- phi_2 + epsilon * d_log_pdf_d_theta_2(theta_1, theta_2, rho) / 2
+      # Record these points
+      phi_1_consequence[i] <- phi_1
+      phi_2_consequence[i] <- phi_2
+      # Full step for theta (vectorized)
+      theta_1_2 <- c(theta_1, theta_2) + epsilon * M_inv %*% c(phi_1, phi_2)
+      #
+      theta_1 <- theta_1_2[1]
+      theta_2 <- theta_1_2[2]
+      # Half step for phi (can be vectorized)
+      phi_1 <- phi_1 + epsilon * d_log_pdf_d_theta_1(theta_1, theta_2, rho) / 2
+      phi_2 <- phi_2 + epsilon * d_log_pdf_d_theta_2(theta_1, theta_2, rho) / 2
+      #
+    }
+    # So now after all this leapfrogging about we have candidate values for theta and phi
+    theta_1_cand <- theta_1
+    theta_2_cand <- theta_2
+    #
+    phi_1_cand <- phi_1
+    phi_2_cand <- phi_2
+    # Compute ratio, on log scale
+    #
+    log_r_theta <- bivariate_normal_pdf_log(theta_1_cand, theta_2_cand, rho) - bivariate_normal_pdf_log(theta_1_old, theta_2_old, rho)
+    log_r_phi <- log_pdf_momentum(phi_1_cand, phi_2_cand, sigma_1, sigma_2) - log_pdf_momentum(phi_1_old, phi_2_old, sigma_1, sigma_2)
+    #
+    log_r <- log_r_theta + log_r_phi
+    #
+    log_alpha <- min(0, log_r)
+    # Accept or reject
+    u <- runif(1)
+    #
+    log_u <- log(u)
+    #
+    if(log_u <= log_alpha){
+      # Accept
+      no_accept <- no_accept + 1 # Record it
+      #
+      theta_1_vec[i] <- theta_1_cand
+      theta_2_vec[i] <- theta_2_cand
+      #
+      phi_1_vec[i] <- phi_1_cand
+      phi_2_vec[i] <- phi_2_cand
+      #
+    } else {
+      # Reject
+      theta_1_vec[i] <- theta_1_old
+      theta_2_vec[i] <- theta_2_old
+      #
+      phi_1_vec[i] <- phi_1_old # Who cares?  Useful for monitoring, I think.
+      phi_2_vec[i] <- phi_2_old # Who cares?  Useful for monitoring, I think.
+    }
+
+  } # End of niter updated
+  # Acceptance rate
+  acceptance_rate <- no_accept/ niter
+  print(paste("Acceptance rate is", acceptance_rate))
+  # Ergodic phase
+  theta_1_ergodic <- theta_1_vec[(niter / 2 + 1):(niter + 1)]
+  theta_2_ergodic <- theta_2_vec[(niter / 2 + 1):(niter + 1)]
+  #
+  phi_1_ergodic <- phi_1_vec[(niter / 2 + 1):(niter + 1)]
+  phi_2_ergodic <- phi_2_vec[(niter / 2 + 1):(niter + 1)]
+  #
+  phi_1_consequence_ergodic <- phi_1_consequence[(niter / 2 + 1):(niter + 1)]
+  phi_2_consequence_ergodic <- phi_2_consequence[(niter / 2 + 1):(niter + 1)]
+  # Some plots
+  par(mfrow = c(6,2))
+  #
+  plot(0:niter, theta_1_vec, type = "l",
+       xlab = "Iteration",
+       ylab = expression(theta[1]),
+       main = paste0("Acceptance rate ", acceptance_rate, 
+                     ", L = ", L,
+                     ", epsilon = ", epsilon))
+  #
+  abline(v = (niter / 2 + 1) - 0.5 - 1, 
+         lwd = 2,
+         col = "green") # Show burn-in
+  #
+  plot(0:niter, theta_2_vec, type = "l",
+       xlab = "Iteration",
+       ylab = expression(theta[2]),
+       main = paste0("Acceptance rate ", acceptance_rate, 
+                     ", L = ", L,
+                     " , epsilon = ", epsilon))
+  #
+  abline(v = (niter / 2 + 1) - 0.5 - 1, lwd = 2,
+         col = "green") # Show burn-in
+  # acf for ergodic phase
+  acf(theta_1_ergodic)
+  title(sub = paste("Sum of squared values", signif(sum(acf(theta_1_ergodic, plot = FALSE)$acf^2), 4)))
+  acf(theta_2_ergodic)
+  title(sub = paste("Sum of squared values", signif(sum(acf(theta_2_ergodic, plot = FALSE)$acf^2), 4)))
+  #
+  plot(0:niter, phi_1_vec, type = "l",
+       xlab = "Iteration",
+       ylab = expression(phi[1]))
+  #
+  abline(v = (niter / 2 + 1) - 0.5 - 1, lwd = 2,
+         col = "green") # Show burn-in
+  #
+  plot(0:niter, phi_2_vec, type = "l",
+       xlab = "Iteration",
+       ylab = expression(phi[2]))
+  #
+  abline(v = (niter / 2 + 1) - 0.5 - 1, lwd = 2,
+         col = "green") # Show burn-in
+
+}
 ```
 
 
@@ -764,9 +1011,12 @@ fit_jeffreys
 \[R(\delta'|x)= \min_{\delta \in D} R(\delta(x)|x)\]
 &emsp;&emsp;则称$\delta'(x)$为后验风险准则下的最优决策函数，或称*贝叶斯决策函数，或贝叶斯解*。   
 &emsp;&emsp;当参数空间$\Theta$与行动集$\mathscr{A}$ 相同，均为某个实数集时，满足上式的$\delta'(x)$又称为$\theta$的贝叶斯解或贝叶斯估计。    
-&emsp;&emsp;这里应着重强调的是定义2.2.2中的前提，即在给定贝叶斯决策问题中讨论贝叶斯解或贝叶斯估计。所谓“给定贝叶斯决策问题”主要是指给定如下三个前提：    
+&emsp;&emsp;这里应着重强调的是定义2.2.2中的前提，即在给定贝叶斯决策问题中讨论贝叶斯解或贝叶斯估计。所谓“给定贝叶斯决策问题”主要是指给定如下三个前提：   
+
 &emsp;&emsp;样本$x$的联合密度函数$p(x|\theta)$;
+
 &emsp;&emsp;参数空间$\Theta$上的先验分布$\pi(\theta)$;
+
 &emsp;&emsp;定义在$\Theta \times \mathscr{A}$上的损失函数$L(\theta,a)$。
 
 &emsp;&emsp;另外，从贝叶斯统计看，一个贝叶斯决策问题比一个贝叶斯推断问题多一个损失函数。或者说，把损失函数引进统计推断就构成贝叶斯决策问题。这样就把贝叶斯推断与经济效益联系起来了。以后按后验平均损失越小越好来进行统计推断，从而形成贝叶斯决策。
