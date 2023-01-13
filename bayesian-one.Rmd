@@ -11,6 +11,8 @@ documentclass: ctexart
 <style type="text/css">
   body{
   font-size: 18pt;
+  margin：20px
+  line-height：4em
 }
 </style>
 
@@ -40,7 +42,7 @@ documentclass: ctexart
 
 ### basic math
 
-&emsp;&emsp; *, +, -，/, ˆ, %%, %/%, abs, sign, acos, asin, atan, atan2, sin, cos, tan, ceiling, floor, round, trunc,
+&emsp;&emsp; *, +, -，/, ^, %%, %/%, abs, sign, acos, asin, atan, atan2, sin, cos, tan, ceiling, floor, round, trunc,
 signif, exp, log, log10, log2, sqrt, max, min, p rod, sum, cummax, cummin, cumprod, cumsum, diff, pmax,
 pmin, range, mean, median, cor, sd, var, rle
 functions to do with functions
@@ -248,6 +250,7 @@ P(\theta|x) \propto \pi(\theta)L
 
 
 # 第三章 &emsp;&emsp; 贝叶斯计算与MCMC 
+
 ## MCMC   
 &emsp;&emsp;贝叶斯统计分析涉及很多积分运算，特别是后验积分的积分运算。    
 &emsp;&emsp;考虑如下积分
@@ -290,7 +293,8 @@ $\pi(\theta |x)$的一个非独立“样本”（严格地讲是一条链在一�
 &emsp;&emsp;边缘分布为
 \[X|Y \sim N(\rho y,1-\rho^2)\]
 \[Y|X \sim N(\rho x,1-\rho^2)\]
-```{r}
+
+```{r cache=TRUE}
 # 
 # Function to sample from a bivariate normal distribution
 Gibbs_bivariate_normal <- function(N = 1000, rho = 0,  
@@ -303,19 +307,14 @@ Gibbs_bivariate_normal <- function(N = 1000, rho = 0,
     # Set up vectors to hold the simulated values
     x <- rep(NA, N + 1)
     y <- rep(NA, N + 1)
-    
     # Set the initial values
     # Remember, R vectors are indexed from 1
-    
     x[1] <- x_0
     y[1] <- y_0
-    
     # Sample from the appropriate conditional distributions
-
     for(i in 2:(N  + 1)){
         # This is where you need to modify the code to sample -ONE- value 
         # from the appropriate conditional distribution 
-        #
         x[i] <- rnorm(1,mean = rho*y[i-1],sd=1-rho^2)  
         y[i] <- rnorm(1,mean = rho*x[i],sd=1-rho^2) 
     }
@@ -324,9 +323,7 @@ Gibbs_bivariate_normal <- function(N = 1000, rho = 0,
     y_ergodic <- y[(N/2 + 1):(N+1)]
     # Some plots
     if(do.plots){
-        #
         p <- par(mfrow = c(3,2), mar = c(4.1, 5.1, 3.1, 1.1))
-        #
         plot(0:N, x, xlab = "Iteration i", ylab = expression(x^(i)), type = "l")
         abline(v = (N/2 + 1) - 0.5 - 1, col = "red", lwd = 2)
         #
@@ -334,7 +331,6 @@ Gibbs_bivariate_normal <- function(N = 1000, rho = 0,
         abline(v = (N/2 + 1) - 0.5 - 1, col = "red", lwd = 2)
         #
         plot(((N/2 + 1):(N+1)) - 1, x_ergodic,  xlab = "Iteration i", ylab = expression(x^(i)), sub = "After burn-in", type = "l")
-      
         #
         plot(((N/2 + 1):(N+1)) - 1, y_ergodic,  xlab = "Iteration i", ylab = expression(y^(i)), sub = "After burn-in", type = "l")
         #
@@ -344,8 +340,7 @@ Gibbs_bivariate_normal <- function(N = 1000, rho = 0,
             lag.max = 15)
         #
         par(p)
-        #
-    }
+        }
     #
     return(list(x = x, y = y, x_ergodic = x_ergodic, y_ergodic = y_ergodic))
 }
@@ -360,13 +355,9 @@ x_ergodic <- g_bvn_0.8$x_ergodic; y_ergodic <- g_bvn_0.8$y_ergodic
 # Monte Carlo approximations
 #E[X] = 0,E[Y] = 0;Var[X] = 1,Var[X] = 1
 mean(x_ergodic);mean(y_ergodic)  
-
 var(x_ergodic); var(y_ergodic) 
-
 cor(x_ergodic, y_ergodic) # cor[X, Y] = rho
-
 ```
-
 
 
 ## MH抽样
@@ -381,9 +372,66 @@ cor(x_ergodic, y_ergodic) # cor[X, Y] = rho
 &emsp;&emsp;c)判断：如果$U \le \frac{\pi(\theta^{(cand)}|x)q(\theta^{(t))}|\theta^{(cand)})}{\pi(\theta^{(t)}|x)q(\theta^{(cand)}|\theta^{(t)})}$，则接受$\theta^{(cand)}$，并令$\theta^{(t+1)}=\theta^{(cand)}$，否则令$\theta^{(t+1)}=\theta^{(t)}$;    
 &emsp;&emsp;d)增加$t$，返回到a)。    
 &emsp;&emsp;Gibbs抽样法是一种特殊的MH算法，其中的每一个候选点都被接受。   
-&emsp;&emsp;MH算法具有普遍意义。  
+&emsp;&emsp;MH算法具有普遍意义。 
 
-### 例子 
+###例1        
+投掷硬币，正面为1，反面为0。得到的数据为(1,1,1,1,1,1,1,1,1,1,1,0,0,0)。用MH方法估计正面的概率。
+
+```{r cached = TRUE}
+# specifiy the data
+mydata <- c(1,1,1,1,1,1,1,1,1,1,1,0,0,0)
+# define the likelihood function
+likelihood <- function(theta,data){
+z <- sum (data == 1)
+N <- length(data)
+pdata <- theta^z+(1-theta)^(N-z)
+return(pdata)
+}
+# define the prior
+prior <- function(theta){
+priorDist <- rep(1,length(theta))
+return(priorDist)
+}
+# define the relative probability of the target distribution
+target <- function(theta,data){
+targetp <- likelihood(theta,data) * prior(theta)
+return(targetp)
+}
+# specify the length of trajectory,i.e., the no. of jumps to try
+trajlength <- 10^4
+trajectory <- rep(0,trajlength);trajectory[1] <- 0.5
+nAccepted <- 0
+set.seed(47405)
+# Now generate the random walk
+for (t in 2:trajlength) {
+  currentVal = trajectory[t]
+  proposal = rnorm(1, mean = currentVal,sd = 0.1)
+  probAccept = min(1,target(proposal,mydata)/target(currentVal,mydata))
+  if (runif(1) < probAccept){
+  trajectory[t+1] = proposal
+  nAccepted = nAccepted + 1
+  }else {
+  trajectory[t+1] = currentVal
+  }
+
+}
+#
+acceptance_rate = nAccepted/trajlength
+plot(0:trajlength, trajectory, type = "l",
+xlab = "Iteration",
+ylab = expression(theta[1]),
+main = paste0("Acceptance rate ", acceptance_rate))
+#
+abline(v = (trajlength / 2 + 1) - 0.5 - 1,
+lwd = 2,
+col = "green") # Show burn-in
+
+mean(trajectory[trajlength / 2:trajlength]);
+sd(trajectory[trajlength / 2:trajlength])
+```
+
+
+### 例2 
 &emsp;&emsp;假设参数$\theta_1,\theta_2$服从二元正态分布
 \[\pi(\theta_1,\theta_2)=(\theta_1+\theta_2)/8\]
 &emsp;&emsp;我们可以分别得到两个参数的边缘分布
@@ -396,10 +444,9 @@ cor(x_ergodic, y_ergodic) # cor[X, Y] = rho
 $\alpha=min(1,\frac{\pi(\theta_1^{(cand)}|\theta_2^{(i-1)})}{\pi(\theta_1^{(i-1)}|\theta_2^{(i-1)})})$
 
 &emsp;&emsp;代码如下：   
-```{r}
+```{r cache=TRUE}
 # Code to implement sampling from the simple
 # bivariate probability density function
-#
 # pi(theta_1, theta_2) = (theta_1 + theta_2) / 8
 # theta_1, theta_2 in [0,2]
 pi_theta_1_given_theta_2 <- function(theta_1, theta_2){
@@ -411,21 +458,14 @@ pi_theta_2_given_theta_1 <- function(theta_2, theta_1){
 }
 # The Metropolis sampling algorithm
 # using the above conditional probability density functions
-#
 N <- 5000 # We will use a large number of iterations
-#
 # Space for theta_1 and theta_2
-#
 theta_1 <- rep(NA, N + 1)
 theta_2 <- rep(NA, N + 1)
-#
 # Initial values of our choice
-#
 theta_1[1] <- 0.8
 theta_2[1] <- 0.2
-#
 # Metropolis algorithm
-#
 for(i in 2:(N+1)){
   # theta_1
   theta_1_cand <- runif(1, 0, 2) # Sample one realization from U[0,2]
@@ -444,9 +484,7 @@ for(i in 2:(N+1)){
   ratio <- pi_theta_2_given_theta_1(theta_2_cand, theta_1[i]) /
     pi_theta_2_given_theta_1(theta_2[i-1], theta_1[i])
     # The latest version of theta_1 is used
-  #
   alpha <- min(1, ratio)
-  #
   u <- runif(1, 0, 1)
   # Decide whether or not to accept the candidate point by generating u from U[0,1]
   theta_2[i] <- ifelse(u <= alpha, theta_2_cand, theta_2[i-1])
@@ -454,24 +492,68 @@ for(i in 2:(N+1)){
 }
 # Extract values from the ergodic phase
 theta_1_ergodic <- theta_1[(N/2 + 1):(N + 1)];theta_2_ergodic <- theta_2[(N/2 + 1):(N + 1)]
-
 # Monte Carlo approximations
 # Random variable means
 mean(theta_1_ergodic);mean(theta_2_ergodic)
-
 # Random variable variances
 var(theta_1_ergodic);var(theta_2_ergodic)
-
 # Random variable standard deviations
 sd(theta_1_ergodic);sd(theta_1_ergodic)
-
 # Correlation between the random variables
 cor(theta_1_ergodic, theta_2_ergodic)
 
 ```
 
 
+### 例3        
+有两个硬币，一个来自加拿大，一个来自印度。$\theta_1,\theta_2$分别是两硬币出现人头的概率。        
+\[p(\theta_1,\theta_2) = p(\theta_1) p(\theta_2) \]
+\[p(y_1|\theta_1,\theta_2) = p(y_1|\theta_1), p(y_2|\theta_1,\theta_2)p(y_2|\theta_2)\]
+\[p(D|\theta_1,\theta_2)=\prod _{y_{1i}\in D_1}p(y_{1i}|\theta_1,\theta_2)\prod _{y_{2i}\in D_2}p(y_{2i}|\theta_1,\theta_2)\]
 
+```{r cached = TRUE}
+#define the likelihood function.
+#the input argument is a vector:theta=c(theta_1,theta_2)
+likelihood = function(theta){
+z1=5;N1=7;z2=2;N2=7
+
+likelihood=(theta[1]^(z1)*(1-theta[1])^(N1-z1))
+(theta[2]^(z2)*(1-theta[2])^(N2-z2))
+return(likelihood)
+}
+#define the prior
+prior = function(theta){
+#here's a beta-beta prior
+a1=3;b1=3;a2=3;b2=3
+
+prior = dbeta(theta[1],a1,b1)*dbeta(theta[2],a2,b2)
+return(prior)
+}
+#define the relative prop of the target distribution
+target = function(theta){
+target = likelihood(theta)*prior(theta)
+}
+trajlength = 10^3
+trajectory = matrix(0,nrow = trajlength, ncol = 2)
+trajectory[1,]=c(0.5,0.5)
+nAccepted = 0
+set.seed(12345)
+covmat = matrix(c(0.2^2,0,0,0.2^2),nrow=2, ncol=2);covmat
+for (i in 1:(trajlength-1)){
+  current = trajectory[i,]
+  proposal = MASS::mvrnorm(n = 1,mu = current,Sigma = covmat)
+  propAccept = min(1,target(proposal)/target(current))
+  if(runif(1) < propAccept){
+  trajectory[i+1,] = proposal
+  nAccepted = nAccepted + 1
+  } else {
+  trajectory[i+1,] = current
+  }
+}
+theta_ergodic <- trajectory[trajlength/2:trajlength,]
+meanTraj <- apply(theta_ergodic,2,mean);meanTraj
+sdTraj <- apply(theta_ergodic,2,sd);sdTraj
+```
 
 
 ## 汉密尔顿抽样   
@@ -525,7 +607,7 @@ Hamiltonian Monte Carlo（HMC）算法能很好的缓解上面的两个问题。
 ## Rstan的结构        
 &emsp;&emsp; 基于RStan求解贝叶斯模型的流程如下：   
 &emsp;&emsp; ①指定环境   
-```{r}
+```{r message=FALSE}
 # install.packages("StanHeaders", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
 # install.packages("rstan", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
 library(rstan) #加载包
@@ -540,16 +622,16 @@ rstan_options(auto_write = TRUE) #将已编译的Stan程序保存到硬盘上
 &emsp;&emsp; 需要指出的是，Stan中的赋值是 =，而分布用～指定，注释用//或者\* \*指定。注意，与教材正态分布的表示不同，RStan语句里的normal(·, ·)第二个参数表示的是标准差，而不是方差。   
 
 &emsp;&emsp; ③准备数据（通常是一个列表）        
-&emsp;&emsp; data_for_Stan <- list(y = y, n = length(y))        
+       
 &emsp;&emsp; ④拟合模型并汇总        
-&emsp;&emsp; fit <- stan(file = "mystan.stan", data = data_for_Stan)        
-&emsp;&emsp; fit从函数返回的对象是类stan的S4对象stanfit。       
+  
+&emsp;&emsp; 从模型拟合函数返回的对象是类stan的S4对象stanfit。       
 &emsp;&emsp; ⑤诊断与其他        
 &emsp;&emsp; 可以使用典型的贝叶斯诊断工具，如轨迹图、密度图等。此外rstan包带有模型比较功能，如WAIC和loo函数。        
 
 ## 一个例子  
 
-```{r}
+```{r cache=TRUE}
 mystan <- "
 data {
   int < lower = 1 > n; 
