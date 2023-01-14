@@ -393,9 +393,9 @@ cor(x_ergodic, y_ergodic) # cor[X, Y] = rho
 &emsp;&emsp;Gibbs抽样法是一种特殊的MH算法，其中的每一个候选点都被接受。   
 &emsp;&emsp;MH算法具有普遍意义。 
 
-###例1    
+### 例1    
 
-投掷硬币，正面为1，反面为0。得到的数据为(1,1,1,1,1,1,1,1,1,1,1,0,0,0)。用MH方法估计正面的概率。
+&emsp;&emsp;投掷硬币，正面为1，反面为0。得到的数据为(1,1,1,1,1,1,1,1,1,1,1,0,0,0)。用MH方法估计正面的概率。
 
 ```{r cached = TRUE}
 # specifiy the data
@@ -582,34 +582,47 @@ sdTraj <- apply(theta_ergodic,2,sd);sdTraj
 &emsp;&emsp; b)MH算法的拒绝率和transition kernel有关，我们希望拒绝率尽量低。       
 Hamiltonian Monte Carlo（HMC）算法能很好的缓解上面的两个问题。        
   
-&emsp;&emsp; 该方法来自于汉密尔顿动力学。简单来说，物体的能量包括势能(取决于位置x)和动能，从而物理系统可以表示为$H(x,p)$(是个常量)。$x$表示物体位置(position),$p$表示物体的动量(momentum)。该系统满足
-\[\frac{dp}{dt}=-\frac{\partial{H}}{\partial{x}}\]
-\[\frac{dx}{dt}=\frac{\partial{H}}{\partial{p}}\]
-&emsp;&emsp;后验分布为
-\[\pi(\theta_1,\theta_2,\dots,\theta_d|y)\]
-&emsp;&emsp;增加辅助变量$\phi_1,\phi_2,\dots,\phi_d$,其概率密度为$\pi(\theta_1,\theta_2,\dots,\theta_d)$。         
-&emsp;&emsp;联合分布定义为
-\[\pi(\theta_1,\theta_2,\dots,\theta_d,\phi_1,\phi_2,\dots,\phi_d|y):=
-\pi(\theta_1,\theta_2,\dots,\theta_d|y) \pi(\phi_1,\phi_2,\dots,\phi_d)
-\]
-&emsp;&emsp;或者用向量表示为    
-\[\pi(\theta,\phi|y)=\pi(\theta|y)\pi(\phi)\]
-&emsp;&emsp;定义汉密尔顿系统
+&emsp;&emsp; 后验分布为
+\[\pi(\theta_1,\theta_2,\cdots,\theta_d|y)\]
+增加辅助变量$r_1,r_2,\cdots,r_d$,辅助变量的概率密度为$\pi(r_1,r_2,\cdots,r_d)$。
+该估计参数和辅助变量的联合分布定义为
+\[\pi(\theta_1,\theta_2,\cdots,\theta_d,r_1,r_2,\cdots,r_d|y)：= \pi(\theta_1,\theta_2,\cdots,\theta_d|y)\pi(r_1,r_2,\cdots,r_d)\]
+或者向量表示为
+\[\pi(\theta,r|y) = \pi(\theta|y)\pi(r)\]
+定义汉密尔顿系统为
 \begin{equation}
 \begin{split}
-& H(\pi(\theta_1,\theta_2,\dots,\theta_d,\phi_1,\phi_2,\dots,\phi_d|y):= -log(\pi(\theta,\phi|y))\\
-& =-log(\pi(\theta|y)\pi(\phi))\\
-& =-log(\pi(\theta|y))-log(\pi(\phi))\\
+& H(\pi(\theta_1,\theta_2,\dots,\theta_d,r_1,r_2,\dots,r_d|y):= -log(\pi(\theta,r|y) )\\
+& =-log(\pi(\theta|y)\pi(r))\\
+& =-log(\pi(\theta|y))-log(\pi(r))\\
+& = T(r|\theta) + V(r)
 \end{split}
 \end{equation}
-&emsp;&emsp;第一项表示动量能，第二项表示势能。    
-&emsp;&emsp;应用汉密尔顿方程
-\[\frac{d\phi}{dt}=\frac{\partial (log(\pi(\theta|y))) }{\partial \theta}\]
-\[\frac{d\theta}{dt}=(\frac{d \theta_1}{dt},\frac{d \theta_2}{dt},\cdots,\frac{d \theta_d}{dt})
-=(\frac{\phi_1}{m_1},\frac{\phi_2}{m_2},\cdots,\frac{\phi_d}{m_d},)\]
+第一项表示动量能，第二项表示势能。因为两者是独立的，$\pi(r|\theta)$=$\pi(r)$。
+
+\[\frac{d\theta}{dt}=+\frac{\partial{T}}{\partial{r}}\]
+\[\frac{dr}{dt}=-\frac{\partial{V}}{\partial{\theta}}\]
+
 &emsp;&emsp;具体算法如下：   
 
+输入：起点$\theta_1$和步长$\epsilon$
+for $ t=1,2,\cdots$ do
 
+对动量$r$进行取样
+\[r(t)=N(0,M)\]
+\[(\theta_0,r_0)=(\theta^{(t)},r^{(t)})\]
+模拟汉密尔顿动力学的离散化
+\[r_0 \gets r_0- \frac {\epsilon}{2} \nabla U(\theta_0) \]
+for $i=1$ to $m$ do
+\[\theta_i \gets \theta_{i-1}- \epsilon M^{-1} r_{i-1}\]
+\[r_i \gets r_{i-1}- \epsilon \nabla U(\theta_m)\]
+end
+\[r_m \gets r_{m}-\frac {\epsilon}{2} \nabla U(\theta_m)\]
+\[(\hat{\theta},\hat{r})=(\theta_m,r_m)\]
+Metropolis-Hastings correction:       
+\[u \sim Uniform(0,1)\]
+\[\rho = e^{H(\hat{\theta},\hat{r})-H(\theta_m,r_m)}\]
+if $u < min(1,\rho)$ ,then $\theta^{(t+1)}=\hat{\theta}$
 
 &emsp;&emsp;代码如下：
 ```{r cached = TRUE}
