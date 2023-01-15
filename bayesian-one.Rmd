@@ -606,7 +606,7 @@ Hamiltonian Monte Carlo（HMC）算法能很好的缓解上面的两个问题。
 &emsp;&emsp;具体算法如下：   
 
 输入：起点$\theta_1$和步长$\epsilon$
-for $ t=1,2,\cdots$ do
+for $t=1,2,\cdots$ do
 
 对动量$r$进行取样
 \[r(t)=N(0,M)\]
@@ -623,7 +623,72 @@ Metropolis-Hastings correction:
 \[u \sim Uniform(0,1)\]
 \[\rho = e^{H(\hat{\theta},\hat{r})-H(\theta_m,r_m)}\]
 if $u < min(1,\rho)$ ,then $\theta^{(t+1)}=\hat{\theta}$
+以上算法的代码如下，
+```{r}
+rm(list=ls())
+set.seed(123456)
+rho=0.8
+U <- function(q){
+  # Please note: additive constant removed
+  (q[1]^2 - 2 * rho * q[1] * q[2] + q[2]^2) / (2 * (1 - rho^2))
+  }
+# Derivatives (hand coded)
+grad_U <- function(q){
+ c((q[1] - rho * q[2] ) / (1 - rho^2),
+   (q[2]  - rho * q[1]) / (1 - rho^2)) 
+}
 
+ HMC = function (U, grad_U, epsilon=0.3, L=20, current_q) {
+  mvmat=matrix(c(1,0,0,1),nrow=2,ncol = 2)
+  q = current_q;  p = MASS::mvrnorm(1, mu=c(0,0), Sigma=mvmat)
+  current_p = p
+  # Make a half step for momentum at the beginning
+    p = p - epsilon * grad_U(q) / 2;
+  
+  # Alternate full steps for position and momentum
+  
+  for (j in 1:L)  {
+    # Make a full step for the position
+    
+    q = q + epsilon * p
+    
+    # Make a full step for the momentum, except at end of trajectory
+    
+    if (j!=L) p = p - epsilon * grad_U(q)
+    }
+  
+  # Make a half step for momentum at the end.
+  
+  p = p - epsilon * grad_U(q) / 2
+  
+  
+  # Negate momentum at end of trajectory to make the proposal symmetric
+  
+  p = -p
+  
+  # Evaluate potential and kinetic energies at start and end of trajectory
+  
+  current_U = U(current_q);  current_K = sum(current_p^2) / 2
+  proposed_U = U(q);  proposed_K = sum(p^2) / 2
+  # Accept or reject the state at end of trajectory, returning either
+  # the position at the end of the trajectory or the initial position
+  result <- ifelse(runif(1) < exp(current_U-proposed_U+current_K-proposed_K),
+                   q,current_q)
+  return(result)
+  
+}
+trajlength = 10^4
+traj = matrix(rep(0,trajlength),nrow =trajlength ,ncol = 2);traj
+traj[1,]=c(0.5,0.3)
+current_q=traj[1,]
+
+for (i in 2:trajlength) {
+    traj[i,] = HMC(U, grad_U, epsilon=0.3, L=20,current_q=traj[i-1,])
+}
+traj
+
+```
+以上代码的参数估计是向量化的，下面的是分开估计的。
 &emsp;&emsp;代码如下：
 ```{r cached = TRUE}
 # Plot the probability density function
