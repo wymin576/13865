@@ -18,7 +18,148 @@ documentclass: ctexart
 }
 </style>
 
-# 第0章 R语言编程
+# 第一章 &emsp;&emsp; 贝叶斯统计简介        
+
+## 1.什么是贝叶斯统计 
+
+&emsp;&emsp;英国学者Thomas Bayes在其论文《Essay towards solving a problem in the doctrine of chances》中提出的一种归纳推理理论，后被一些统计学者发展为一种系统的统计推断方法，称为贝叶斯方法。     
+&emsp;&emsp;认为贝叶斯方法是唯一合理的统计推断方法的统计学者组成数理统计学中的贝叶斯学派，其形成可追溯到 20世纪30年代。二战以后发展为一个有影响的学派。  
+
+&emsp;&emsp;与之对峙的是频率学派。代表人物是英国的皮尔逊、费希尔等人和奈曼。    
+&emsp;&emsp;理解贝叶斯统计必须理解贝叶斯定理。   
+
+### **贝叶斯定理**    
+&emsp;&emsp;如果有两个随机事件A,B，那么给定A,B的条件概率可以表示为
+\begin{equation}
+P(B|A)=\frac{P(AB)}{P(A)}=\frac{P(B)P(A|B)}{P(A)} {(1)}
+\end{equation}
+&emsp;&emsp;这就是概率论里的*条件概率*，也称作*贝叶斯定理*。  
+&emsp;&emsp;在统计学中，如果$A$代表数据$x$，$B$代表参数$\theta$,那么公式(1)可以表示为
+\begin{equation}
+P(\theta|x)=\frac{P(\theta,x)}{m(x)}=\frac{\pi(\theta)P(x|\theta)}{m(x)}=\frac{\pi(\theta)L(\theta)}{m(x)} {(2)}
+\end{equation}
+&emsp;&emsp;这就是贝叶斯公式。$m(x)$是数据的*边缘分布*，$L$是*似然函数*,$\pi(\theta)$是参数的*先验(分布)*。        
+
+&emsp;&emsp;由于分母$m(x)$与$\theta$无关，所以公式(2)可以表示为
+\begin{equation}
+P(\theta|x) \propto \pi(\theta)L(\theta)
+\end{equation}
+$\propto $表示"等比例于"
+&emsp;&emsp;**后验分布=先验分布+样本分布**
+  
+&emsp;&emsp;为了比较频率学派和贝叶斯学派的范式，用一个小例子说明。   
+
+### **一个例子**     
+&emsp;&emsp;10次伯努利实验，成功1次。问成功率是多少？   
+&emsp;&emsp;频率学派求点估计的思路是用极大似然法，可以得到点估计值是1/10。(证明它)   
+&emsp;&emsp;贝叶斯学派认为参数和数据都是随机的。有了样本数据意味着给定数据求参数，于是我们可以根据以上信息求参数的后验分布。  
+&emsp;&emsp;问题是我们需要参数的先验分布。这里采用*拉普拉斯先验*$\theta \sim U(0,1)$。   
+
+&emsp;&emsp;于是
+\[p(\theta|x) \propto L(\theta)*\pi(\theta) \propto \theta^{2-1}(1-\theta)^{10-1}*1\]
+
+&emsp;&emsp;这是贝塔分布$Be(2,10)$密度函数的*核*。因此根据密度函数的正则性可以推出$\theta|x \sim Be(2,10)$。    
+
+&emsp;&emsp;如果点估计取期望，则$\hat \theta= \frac {2}{12}$；    
+&emsp;&emsp;如果点估计取众数(mode),则$\hat \theta= \frac {1}{10}$,与极大似然估计值相同。     
+ 
+&emsp;&emsp;贝叶斯方法的目标是求参数的分布。给定特定的先验（共轭），可以直接得到后验分布。
+
+&emsp;&emsp;如果不是共轭先验呢？后验分布的密度函数可以写出，但不是已知分布，往往涉及大量的积分运算。 
+
+&emsp;&emsp;由贝叶斯定理，更新后的分布用后验分布表示为  
+\begin{equation}
+\pi (\theta|x)=\frac {\pi(\theta) p(x|\theta)}{\int \pi(\theta) p(x|\theta) d \theta}
+\end{equation}
+&emsp;&emsp;一般性的贝叶斯估计为
+\begin{equation}
+\hat{g(\theta)}=\frac {\int g(\theta) \pi(\theta) p(x|\theta)d \theta}{\int \pi(\theta) p(x|\theta) d \theta}
+\end{equation}
+&emsp;&emsp;可以看到，要得到参数$\theta$或$g(\theta)$的估计，或更为一般地，它们的后验分布，需要求得公式中的积分。在维数不是很高时可以采用数值积分或正态近似的方法。然而，在参数的维数较大时，这些方法很难实现。        
+&emsp;&emsp;这时候，MCMC登场了。也就是用*随机模拟*的方法获得后验分布。    
+
+&emsp;&emsp;因此，如果说经典统计偏向*数学方法*，那么贝叶斯统计则偏向*模拟方法*。
+
+
+## 2.为什么要学贝叶斯统计    
+&emsp;&emsp;贝叶斯统计与经典统计不是非此即彼的关系。对于本科生来说，两种推断方法都需要掌握。正如R和Python,掌握一门软件是不够的，必须两门都掌握。     
+&emsp;&emsp;与经典统计相比，贝叶斯统计有什么优势呢？    
+&emsp;&emsp;**容易学**：与经典统计相比，贝叶斯统计的理论很简单，仅仅是加了个先验和MCMC而已。       
+&emsp;&emsp;**更容易解释**：考虑例1的变形。如果10次实验成功次数为0，我们得到的成功率的点估计是0。100次实验成功次数为0,1000次实验成功次数为0,成功率的点估计依然是0。尽管这从统计上是没错的，但给人的感觉是不同的。随着实验次数的增长，实验者对成功事件出现的信心会越来越弱。贝叶斯估计可以反映这一点。（基于拉普拉斯先验证明它）。       
+&emsp;&emsp;考虑另一个相似的情形。某公司需要采购办公用品，三家公司来游说购买他们的产品。负责采购的领导说：“产品质量说了算”。于是组织质量检查，抽取100个产品检查次品率。结果三家企业产品的次品率都是0。极大似然法无助于决策。这个时候你了解到这三家企业一家是世界500强，另一家是中国500强，还有一家是本省500强。你会选择哪家企业呢？    
+&emsp;&emsp;**样本量很小或者样本缺失**：明天联想股票是涨还是跌？这是一次性事件。极大似然估计无能为力，但贝叶斯估计可以:找专家咨询获得先验，然后求先验预测分布。   
+
+### **3.对贝叶斯统计的批评**    
+&emsp;&emsp;在MCMC应用于贝叶斯统计以前，贝叶斯方法的数学性质是很清楚的。参考Jeffreys对无信息先验的证明。    
+&emsp;&emsp;但现在，贝叶斯方法越来越依赖于MCMC。Andrew Gelman说，我们不仅难以评价贝叶斯方法的统计性质，甚至不能完全确定是否收敛，仅仅添加了一些无法验证的假设。不少人将贝叶斯方法视为“伪科学”。   
+
+## 4.**贝叶斯统计简史**    
+
+## 4.1*贝叶斯其人*    
+&emsp;&emsp;1702年出生于伦敦   
+&emsp;&emsp;1719年进入爱丁堡大学学习，学习逻辑学和神学   
+&emsp;&emsp;1722年毕业   
+&emsp;&emsp;1733成为牧师   
+&emsp;&emsp;1742年当选为皇家学会会员   
+&emsp;&emsp;1752年退休   
+&emsp;&emsp;1761年4月17日逝世于Kent郡   
+&emsp;&emsp;1764年论文发表   
+
+&emsp;&emsp;以上内容参考自圣安德鲁斯大学对贝叶斯的介绍。   
+网址https://mathshistory.st-andrews.ac.uk/Biographies/Bayes/
+
+
+## 4.2*发展过程*  
+&emsp;&emsp;阶段1: 起源
+
+&emsp;&emsp;阶段2: 荣耀的60年代The Glorious Sixties    
+
+&emsp;&emsp;阶段3: 实效的70年代The Pragmatic Seventies    
+
+&emsp;&emsp;阶段4: 神秘的80年代The Enigmatic Eighties   
+
+&emsp;&emsp;阶段5: 成为明星的90年代To the Stars in the Nineties   
+
+&emsp;&emsp;阶段6: Bayesian-Fisherian合流的21世纪
+
+# 第二章 基础知识       
+## 1. 三个分布       
+### 考研大纲以外的分布       
+密度函数为
+\[p(x)=\frac{\lambda^{\alpha}}{\Gamma(\alpha)}x^{\alpha-1}e^{-\lambda{x}},x > 0\]
+$\alpha>0$是形状参数，$\lambda>0$是尺度参数。
+
+### Beta分布        
+     
+密度函数为
+\[p(x)=\frac{\Gamma(\alpha+\beta)}{\Gamma(\alpha)\Gamma(\beta)}x^{\alpha-1}(1-x)^{\beta}\]
+$\alpha>0,\beta>0 $
+
+### Inv-Gamma分布         
+如果$X \sim Ga(\alpha,\lambda)$,求$Y=\frac{1}{X}$的密度函数。
+
+### Cauchy分布
+密度函数为
+\[p(x)=\frac{1}{\pi} \frac{1}{\lambda^2+(x-\mu)^2}\]
+$\mu > 0$是形状参数，$\lambda>0$是尺度参数。
+
+### half-Cauchy分布
+
+密度函数为
+\[p(x)=\frac{2}{\pi} \frac{1}{\lambda^2+(x-\mu)^2}, x>0\]
+$\mu > 0$是形状参数，$\lambda>0$是尺度参数。
+
+### Pareto分布
+密度函数为
+\[p(x)=\frac{\alpha}{\mu}(\frac{\mu}{x})^{\alpha+1},x>\mu\]
+
+$\mu > 0$是门限参数，$\lambda>0$是尺度参数。
+
+
+## 2.似然函数                  
+
+
+# 第三章 R语言编程
 ## 对象
 
 &emsp;&emsp;表1 R语言主要对象
@@ -79,110 +220,6 @@ split, expand.grid
 ### apply & friends       
 
 &emsp;&emsp; lapply, sapply, vapply, apply, tapply, replicate
-
-
-# 第一章 &emsp;&emsp; 贝叶斯统计简介        
-
-## 1.什么是贝叶斯统计 
-
-&emsp;&emsp;英国学者Thomas Bayes在其论文《Essay towards solving a problem in the doctrine of chances》中提出的一种归纳推理理论，后被一些统计学者发展为一种系统的统计推断方法，称为贝叶斯方法。     
-&emsp;&emsp;认为贝叶斯方法是唯一合理的统计推断方法的统计学者组成数理统计学中的贝叶斯学派，其形成可追溯到 20世纪30年代。二战以后发展为一个有影响的学派。  
-
-&emsp;&emsp;与之对峙的是频率学派。代表人物是英国的皮尔逊、费希尔等人。    
-&emsp;&emsp;理解贝叶斯统计必须理解贝叶斯定理。   
-
-### 贝叶斯定理    
-&emsp;&emsp;如果有两个随机事件A,B，那么给定A,B的条件概率可以表示为
-\begin{equation}
-P(B|A)=\frac{P(AB)}{P(A)}=\frac{P(B)P(A|B)}{P(A)}
-\end{equation}
-&emsp;&emsp;这就是概率论里的*条件概率*，也称作*贝叶斯定理*。  
-&emsp;&emsp;在统计学中，如果$A$代表数据$x$，$B$代表参数$\theta$,那么公式(1)可以表示为
-\begin{equation}
-P(\theta|x)=\frac{P(\theta,x)}{m(x)}=\frac{\pi(\theta)P(x|\theta)}{m(x)}=\frac{\pi(\theta)L}{m(x)}
-\end{equation}
-&emsp;&emsp;这就是贝叶斯公式。$m(x)$是数据的*边缘分布*，$L$是*似然函数*,$\pi(\theta)$是参数的*先验(分布)*。        
-
-&emsp;&emsp;由于分母$m(x)$与$\theta$无关，所以公式(2)可以表示为
-\begin{equation}
-P(\theta|x) \propto \pi(\theta)L
-\end{equation}
-
-&emsp;&emsp;**后验分布=先验分布+样本分布**
-  
-&emsp;&emsp;为了比较频率学派和贝叶斯学派的范式，用一个小例子说明。   
-
-### **一个例子**     
-&emsp;&emsp;10次伯努利实验，成功1次。问成功率是多少？   
-&emsp;&emsp;频率学派求点估计的思路是用极大似然法，可以得到点估计值是1/10。(证明它)   
-&emsp;&emsp;贝叶斯学派认为参数和数据都是随机的。有了样本数据意味着给定数据求参数，于是我们可以根据以上信息求参数的后验分布。  
-&emsp;&emsp;问题是我们需要参数的先验分布。这里采用*拉普拉斯先验*$\theta \sim U(0,1)$。   
-
-&emsp;&emsp;于是
-\[p(\theta|x) \propto L*\pi(\theta) \propto \theta^{2-1}(1-\theta)^{10-1}*1\]
-
-&emsp;&emsp;这是贝塔分布$Be(2,10)$密度函数的*核*。因此根据密度函数的正则性可以推出$\theta|x \sim Be(2,10)$。    
-
-&emsp;&emsp;如果点估计取期望，则$\hat \theta= \frac {2}{12}$；    
-&emsp;&emsp;如果点估计取众数(mode),则$\hat \theta= \frac {1}{10}$,与极大似然估计值相同。     
- 
-&emsp;&emsp;贝叶斯方法的目标是求参数的分布。给定特定的先验（共轭），可以直接得到后验分布。
-
-&emsp;&emsp;如果不是共轭先验呢？后验分布的密度函数可以写出，但不是已知分布，往往涉及大量的积分运算。 
-
-&emsp;&emsp;由贝叶斯定理，更新后的分布用后验分布表示为  
-\begin{equation}
-\pi (\theta|x)=\frac {\pi(\theta) p(x|\theta)}{\int \pi(\theta) p(x|\theta) d \theta}
-\end{equation}
-&emsp;&emsp;一般性的贝叶斯估计为
-\begin{equation}
-\hat{g(\theta)}=\frac {\int g(\theta) \pi(\theta) p(x|\theta)d \theta}{\int \pi(\theta) p(x|\theta) d \theta}
-\end{equation}
-&emsp;&emsp;这时候，MCMC登场了。也就是用*随机模拟*的方法获得后验分布。    
-
-&emsp;&emsp;因此，如果说经典统计偏向*数学方法*，那么贝叶斯统计则偏向*模拟方法*。
-
-
-## 2.为什么要学贝叶斯统计    
-&emsp;&emsp;贝叶斯统计与经典统计不是非此即彼的关系。对于本科生来说，两种推断方法都需要掌握。正如R和Python,掌握一门软件是不够的，必须两门都掌握。     
-&emsp;&emsp;与经典统计相比，贝叶斯统计有什么优势呢？    
-&emsp;&emsp;**容易学**：与经典统计相比，贝叶斯统计仅仅是加了个先验和MCMC而已。       
-&emsp;&emsp;**更容易解释**：考虑例1的变形。如果10次实验成功次数为0，我们得到的成功率的点估计是0。那么100次实验成功次数为0,1000次实验成功次数为0,成功率的点估计都是0。尽管这从统计上是没错的，但给人的感觉是不同的。随着实验次数的增长，实验者对成功事件出现的信心会越来越弱。贝叶斯估计可以反映这一点。（基于拉普拉斯先验证明它）。       
-&emsp;&emsp;考虑另一个相似的情形。某公司需要采购办公用品，三家公司来游说购买他们的产品。负责采购的领导说：“产品质量说了算”。于是组织质量检查，抽取100个产品检查次品率。结果三家企业产品的次品率都是0。极大似然法无助于决策。这个时候你了解到这三家企业一家是世界500强，另一家是中国500强，还有一家是本省500强。你会选择哪家企业呢？    
-&emsp;&emsp;**样本量很小或者样本缺失**：明天联想股票是涨还是跌？这是一次性事件。极大似然估计无能为力，但贝叶斯估计可以:找专家咨询获得先验，然后求先验预测分布。   
-
-### 3.对贝叶斯统计的批评    
-&emsp;&emsp;在MCMC应用于贝叶斯统计以前，贝叶斯方法的数学性质是很清除的。参考Jeffreys对无信息先验的证明。    
-&emsp;&emsp;但现在，贝叶斯方法越来越依赖于MCMC。Andrew Gelman说，我们不仅难以评价贝叶斯方法的统计性质，甚至不能完全确定是否收敛，仅仅添加了一些无法验证的假设。不少人将贝叶斯方法视为“伪科学”。   
-
-## 贝叶斯统计简史    
-
-## 贝叶斯其人    
-&emsp;&emsp;1702年出生于伦敦   
-&emsp;&emsp;1719年进入爱丁堡大学学习，学习逻辑学和神学   
-&emsp;&emsp;1722年毕业   
-&emsp;&emsp;1733成为牧师   
-&emsp;&emsp;1742年当选为皇家学会会员   
-&emsp;&emsp;1752年退休   
-&emsp;&emsp;1761年4月17日逝世于Kent郡   
-&emsp;&emsp;1764年论文发表   
-
-&emsp;&emsp;以上内容参考自圣安德鲁斯大学对贝叶斯的介绍。   
-网址https://mathshistory.st-andrews.ac.uk/Biographies/Bayes/
-
-
-## 发展过程    
-&emsp;&emsp;阶段1: 起源
-
-&emsp;&emsp;阶段2: 荣耀的60年代The Glorious Sixties    
-
-&emsp;&emsp;阶段3: 实效的70年代The Pragmatic Seventies    
-
-&emsp;&emsp;阶段4: 神秘的80年代The Enigmatic Eighties   
-
-&emsp;&emsp;阶段5: 成为明星的90年代To the Stars in the Nineties   
-
-&emsp;&emsp;阶段6: Bayesian-Fisherian合流的21世纪
 
 
 # 第二章 &emsp;&emsp; 先验    
