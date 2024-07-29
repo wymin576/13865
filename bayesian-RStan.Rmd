@@ -1,0 +1,1844 @@
+---
+title: "基于RStan的贝叶斯案例分析"
+author: "汪燕敏"
+date: "2021-01-13"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+<style type="text/css">
+  body{
+  font-size: 18pt;
+  margin：20px
+  line-height：4em
+}
+</style>
+
+# 第一章 &emsp;&emsp; 贝叶斯统计简介        
+
+## 1.什么是贝叶斯统计 
+
+&emsp;&emsp;英国学者Thomas Bayes在其论文《Essay towards solving a problem in the doctrine of chances》中提出的一种归纳推理理论，后被一些统计学者发展为一种系统的统计推断方法，称为*贝叶斯方法*。     
+&emsp;&emsp;认为贝叶斯方法是唯一合理的统计推断方法的统计学者组成数理统计学中的*贝叶斯学派*，其形成可追溯到 20世纪30年代。二战以后发展为一个有影响的学派。  
+
+&emsp;&emsp;与之对峙的是频率学派。代表人物是英国的皮尔逊、费希尔等人和奈曼。    
+&emsp;&emsp;理解贝叶斯统计必须理解贝叶斯定理。   
+
+### **贝叶斯定理**    
+&emsp;&emsp;如果有两个随机事件A,B，那么给定A,B的条件概率可以表示为
+\begin{equation}
+P(B|A)=\frac{P(AB)}{P(A)}=\frac{P(B)P(A|B)}{P(A)} {(1)}
+\end{equation}
+&emsp;&emsp;这就是概率论里的*条件概率*，也称作*贝叶斯定理*。  
+&emsp;&emsp;在统计学中，如果$A$代表数据$x$，$B$代表参数$\theta$,那么公式(1)可以表示为
+\begin{equation}
+P(\theta|x)=\frac{P(\theta,x)}{m(x)}=\frac{\pi(\theta)P(x|\theta)}{m(x)}=\frac{\pi(\theta)L(\theta)}{m(x)} {(2)}
+\end{equation}
+&emsp;&emsp;这就是贝叶斯公式。$m(x)$是数据的*边缘分布*，$L$是*似然函数*,$\pi(\theta)$是参数的*先验(分布)*。  
+
+
+
+&emsp;&emsp;由于分母$m(x)$与$\theta$无关，所以公式(2)可以表示为
+\begin{equation}
+P(\theta|x) \propto \pi(\theta)L(\theta)
+\end{equation}
+$\propto$表示"等比例于"。于是得到       
+&emsp;&emsp;**后验信息=先验信息+样本信息**
+  
+&emsp;&emsp;为了比较频率学派和贝叶斯学派的范式，用一个小例子说明。   
+
+### **一个例子**     
+&emsp;&emsp;10次伯努利实验，成功1次。问成功率是多少？   
+&emsp;&emsp;频率学派求点估计的思路是用极大似然法，可以得到点估计值是1/10。(证明它)   
+&emsp;&emsp;贝叶斯学派认为参数和数据都是随机的。有了样本数据意味着给定数据求参数，于是我们可以根据以上信息求参数的后验分布。  
+&emsp;&emsp;问题是我们需要参数的先验分布。这里采用*拉普拉斯先验*$\theta \sim U(0,1)$。   
+
+&emsp;&emsp;于是
+\[p(\theta|x) \propto L(\theta)*\pi(\theta) \propto \theta^{2-1}(1-\theta)^{10-1}*1\]
+
+&emsp;&emsp;这是贝塔分布$Be(2,10)$密度函数的*核*。根据密度函数的正则性可以推出$\theta|x \sim Be(2,10)$。    
+
+&emsp;&emsp;如果点估计取期望，则$\hat \theta= \frac {2}{12}$；    
+&emsp;&emsp;如果点估计取众数(mode),则$\hat \theta= \frac {1}{10}$,与极大似然估计值相同。     
+ 
+&emsp;&emsp;贝叶斯方法的目标是求参数的分布。给定特定的先验（共轭），可以直接得到后验分布。
+
+&emsp;&emsp;如果不是共轭先验呢？后验分布的密度函数可以写出，但不是已知分布，往往涉及大量的积分运算。 
+
+&emsp;&emsp;由贝叶斯定理，更新后的分布用后验分布表示为  
+\begin{equation}
+\pi (\theta|x)=\frac {\pi(\theta) p(x|\theta)}{\int \pi(\theta) p(x|\theta) d \theta}
+\end{equation}
+&emsp;&emsp;一般性的参数贝叶斯估计为
+\begin{equation}
+\hat{g(\theta)}=\frac {\int g(\theta) \pi(\theta) p(x|\theta)d \theta}{\int \pi(\theta) p(x|\theta) d \theta}
+\end{equation}
+&emsp;&emsp;可以看出，要得到参数$\theta$或$g(\theta)$的估计，或更为一般地，它们的后验分布，需要求得公式中的积分。在维数不是很高时可以采用数值积分或正态近似的方法。然而，在参数的维数较大时，这些方法很难实现。        
+&emsp;&emsp;这时候，MCMC登场了。也就是用*马尔科夫链随机模拟*的方法获得后验分布。    
+
+&emsp;&emsp;因此，如果说经典统计偏向*数学方法*，那么贝叶斯统计则偏向*模拟方法*。
+
+
+## 2.为什么要学贝叶斯统计    
+&emsp;&emsp;贝叶斯统计与经典统计不是非此即彼的关系。对于本科生来说，两种推断方法都需要掌握。正如R和Python,掌握一门软件是不够的，必须两门都掌握。     
+
+&emsp;&emsp;与经典统计相比，贝叶斯统计有什么优势呢？  
+
+&emsp;&emsp;**容易学**：与经典统计相比，贝叶斯统计的理论很简单，仅仅是加了个先验和MCMC而已。  
+
+&emsp;&emsp;**更容易解释**：考虑例1的变形。如果10次实验成功次数为0，我们得到的成功率的点估计是0。100次实验成功次数为0,1000次实验成功次数为0,成功率的点估计依然是0。尽管这从统计上是没错的，但给人的感觉是不同的。随着实验次数的增长，实验者对成功事件出现的信心会越来越弱。贝叶斯估计可以反映这一点。（基于拉普拉斯先验证明它）。    
+
+&emsp;&emsp;**分层数据**：参数的嵌套结构天然适用于分层模型。经典统计很难处理分层模型，而用贝叶斯方法要简单得多。
+
+&emsp;&emsp;考虑另一个相似的情形。某公司需要采购办公用品，三家公司来游说购买他们的产品。负责采购的领导说：“产品质量说了算”。于是组织质量检查，抽取100个产品检查次品率。结果三家企业产品的次品率都是0。极大似然法无助于决策。这个时候你了解到这三家企业一家是世界500强，另一家是中国500强，还有一家是本省500强。你会选择哪家企业呢？    
+&emsp;&emsp;**样本量很小或者样本缺失**：明天联想股票是涨还是跌？这是一次性事件。极大似然估计无能为力，但贝叶斯估计可以:找专家咨询获得先验，然后求先验预测分布。   
+
+### **3.对贝叶斯统计的批评**    
+&emsp;&emsp;在MCMC应用于贝叶斯统计以前，贝叶斯方法的数学性质是很清楚的。参考Jeffreys对无信息先验的证明。    
+&emsp;&emsp;但现在，贝叶斯方法越来越依赖于MCMC。Andrew Gelman说，我们不仅难以评价贝叶斯方法的统计性质，甚至不能完全确定是否收敛，仅仅添加了一些无法验证的假设。不少人将贝叶斯方法视为“伪科学”。   
+
+## 4.**贝叶斯统计简史**    
+
+## 4.1*贝叶斯其人*    
+&emsp;&emsp;1702年出生于伦敦   
+&emsp;&emsp;1719年进入爱丁堡大学学习，学习逻辑学和神学   
+&emsp;&emsp;1722年毕业   
+&emsp;&emsp;1733成为牧师   
+&emsp;&emsp;1742年当选为皇家学会会员   
+&emsp;&emsp;1752年退休   
+&emsp;&emsp;1761年4月17日逝世于Kent郡   
+&emsp;&emsp;1764年论文发表   
+
+&emsp;&emsp;以上内容参考自圣安德鲁斯大学对贝叶斯的介绍。   
+网址https://mathshistory.st-andrews.ac.uk/Biographies/Bayes/
+
+
+## 4.2*发展过程*  
+&emsp;&emsp;阶段1: 起源
+
+&emsp;&emsp;阶段2: 荣耀的60年代The Glorious Sixties    
+
+&emsp;&emsp;阶段3: 实效的70年代The Pragmatic Seventies    
+
+&emsp;&emsp;阶段4: 神秘的80年代The Enigmatic Eighties   
+
+&emsp;&emsp;阶段5: 成为明星的90年代To the Stars in the Nineties   
+
+&emsp;&emsp;阶段6: Bayesian-Fisherian合流的21世纪
+
+# 第二章 基础知识       
+##  考研大纲以外的分布      
+###  Gamma分布      
+密度函数为
+\[p(x)=\frac{\lambda^{\alpha}}{\Gamma(\alpha)}x^{\alpha-1}e^{-\lambda{x}},x > 0\]
+$\alpha>0$是形状参数，$\lambda>0$是尺度参数。
+```{r}
+rm(list=ls())
+plot(density(rgamma(1000, shape = 2,  scale = 1)),
+     col=1)
+lines(density(rgamma(1000, shape = 2,  scale = 2)),
+      col=2)
+lines(density(rgamma(1000, shape = 3,  scale = 1)),
+      col=3)
+
+legend("topright", inset=.05, title="Gamma Distribution", 
+       c("shape = 2,  scale = 1",
+         "shape = 2,  scale = 2",
+         "shape = 3,  scale = 1"),
+       col=c(1:3),cex=0.5) 
+
+```
+
+可以看出,Gamma分布是右偏的。       
+当$\alpha>0 = 1$时,Gamma分布退化为指数分布,密度函数为
+$p(x)=\lambda e^{-\lambda {x}}$。       
+
+
+### Inv-Gamma分布         
+如果$X \sim Ga(\alpha,\lambda)$,求$Y=\frac{1}{X}$的密度函数。
+
+```{r}
+rm(list=ls())
+plot(density(invgamma::rinvgamma(1000, shape = 5,  scale = 2)),
+     col='red',lty = 1,ylim = c(0,25))
+lines(density(invgamma::rinvgamma(1000, shape = 5,  scale = 5)),
+      col='blue',lty = 2)
+lines(density(invgamma::rinvgamma(1000, shape = 10,  scale = 2)),
+      col='orange',lty = 3)
+
+legend("topright", inset=.05, title="Inv-Gamma Distribution", 
+       c("shape = 2,  scale = 1",
+         "shape = 2,  scale = 2",
+         "shape = 3,  scale = 1"),
+       col=c('red','blue','orange'),lty = c(1:3),cex=0.6) 
+```
+
+可以看出,Inv-Gamma分布是右偏的。
+
+### Beta分布        
+     
+密度函数为
+\[p(x)=\frac{\Gamma(\alpha+\beta)}{\Gamma(\alpha)\Gamma(\beta)}x^{\alpha-1}(1-x)^{\beta-1}\]
+$\alpha>0,\beta>0$,两个都是形状参数。
+```{r}
+rm(list=ls())
+plot(density(rbeta(1000, shape1 = 2,  shape2 = 1)),
+     col=1)
+lines(density(rbeta(1000, shape1 = 2,  shape2 = 2)),
+      col=2)
+lines(density(rbeta(1000, shape1 = 1,  shape2 = 2)),
+      col=3)
+
+legend("bottom", inset=.05, title="Beta Distribution", 
+       c("shape1 = 2,  shape2 = 1",
+         "shape1 = 2,  shape2 = 2",
+         "shape1 = 1,  shape2 = 2"),
+       col=c(1:3),cex = 0.5) 
+
+```
+当$\alpha = \beta$,Beta分布近似对称。任意一个shape参数发生变化，分布形状都能发生变化。        
+
+当$\alpha = \beta = 1$,Beta分布退化为$(0,1)$上的均匀分布
+
+### Cauchy分布
+密度函数为
+\[p(x)=\frac{1}{\pi} \frac{\lambda}{\lambda^2+(x-\mu)^2}\]
+$\mu > 0$是位置参数，$\lambda>0$是尺度参数。
+
+```{r}
+rm(list=ls())
+set.seed(123)
+
+plot(density(rcauchy(1000, location = 0,  scale = 1)),
+     col='red',lty = 1,xlim = c(-10,20),ylim = c(0,0.6),
+     main = '')
+lines(density(rt(1000, df = 10)),
+      col='blue',lty = 2)
+lines(density(rnorm(1000, mean = 0,  sd = 1)),
+      col='orange',lty = 3)
+
+legend("topright", inset=.05, 
+       c("C(0,1)",
+         "t(10)",
+         "N(0,1)"),
+       col=c('red','blue','orange'),lty = c(1:3),cex=0.6) 
+
+```
+三个对称分布中，Cauchy分布最平坦。
+
+### Half-Cauchy分布
+如果$X \sim Cauchy(0,\sigma)$,那么$|X| \sim Half-Cauchy(0,\sigma) $
+密度函数为
+\[p(x)=\frac{2}{\pi} \frac{\lambda}{\lambda^2+(x-\mu)^2}, x>0\]
+$\mu > 0$是位置参数，$\lambda>0$是尺度参数。
+```{r}
+library(extraDistr)
+x <- rhcauchy(1e5, 2)
+hist(x, 2e5, freq = FALSE, xlim = c(0, 100))
+curve(dhcauchy(x, 2), 0, 100, col = "red", add = TRUE)
+```
+半Cauchy是右偏的。
+
+### Half-Normal分布
+如果$X \sim N(0,\sigma)$,那么$|X| \sim Half-normal(0,\sigma) $
+
+密度函数为
+\[f(x;\mu,\sigma) = \sqrt{\frac{2}{\pi \sigma^2}} e^{-\frac{(x-\mu)^2}{2\sigma^2}},x \ge \mu\]
+
+```{r}
+rm(list=ls())
+library(extraDistr)
+x <- rhnorm(1e5, 2)
+hist(x, 100, freq = FALSE)
+curve(dhnorm(x, 2), 0, 8, col = "red", add = TRUE)
+
+```
+
+
+### Pareto分布
+密度函数为
+\[p(x)=\frac{\alpha}{\mu}(\frac{\mu}{x})^{\alpha+1},x>\mu\]
+
+$\mu > 0$是scale参数(也有称为门限参数的)，$\alpha>0$是shape参数。
+
+```{r}
+hist(distributionsrd::rpareto (1000, k = 2,  xmin = 3))
+```
+与Gamma分布，Inv-gamma分布相比，Pareto的右偏更加严重。
+
+
+
+
+
+# 第三章 R语言编程        
+
+## 对象
+
+&emsp;&emsp;表1 R语言主要对象
+
+ |  | 同质性对象 | 异质性对象 |
+|----|----|----|
+1d | atomic vectors | list |
+2d | matrix | dataframe |
+3d | array  |  |
+
+## 函数表
+### the first function to learn       
+
+&emsp;&emsp; ?, str
+
+### important operators and assignment        
+
+&emsp;&emsp; %in%, match, =, <-, «-, $, [, [[, head, tail, subset, with, assign, get
+
+### comparison    
+
+&emsp;&emsp; all.equal, identical, !=, ==, >, >=, <, <=, is.na, complete.cases, is.finite       
+
+### basic math
+
+&emsp;&emsp; *, +, -，/, ^, %%, %/%, abs, sign, acos, asin, atan, atan2, sin, cos, tan, ceiling, floor, round, trunc,
+signif, exp, log, log10, log2, sqrt, max, min, p rod, sum, cummax, cummin, cumprod, cumsum, diff, pmax,
+pmin, range, mean, median, cor, sd, var, rle
+
+### functions to do with functions        
+
+&emsp;&emsp; function, missing, on.exit, return, invisible
+
+### logical & sets        
+
+&emsp;&emsp; &, |, !, xor, all, any, intersect, union, setdiff, setequal, which
+
+### vectors and matrices        
+
+&emsp;&emsp; c, matrix
+
+### automatic coercion rules character > numeric > logical        
+
+&emsp;&emsp; length, dim, ncol, nrow, cbind, rbind, names, colnames, rownames, t, diag, sweep, as.matrix, data.matrix
+
+### making vectors        
+
+&emsp;&emsp; c, rep, rep_len, seq, seq_len, seq_along, rev, sample, choose, factorial, combn, (is/as).(character/numeric/logical/. . . )
+
+### lists & data.frame        
+
+&emsp;&emsp; list, unlist, data.frame, as.data.frame,
+split, expand.grid
+
+### control flow        
+
+&emsp;&emsp; if, &&, ||, for, while, next, break, switch, ifelse
+
+### apply & friends       
+
+&emsp;&emsp; lapply, sapply, vapply, apply, tapply, replicate
+
+
+# 第四章 &emsp;&emsp; 先验    
+
+## 1.共轭先验 
+&emsp;&emsp;定义1  设$\theta$是总体分布中的参数（或参数向量），$\pi(\theta)$是$\theta$的
+先验密度函数，假如由抽样信息算得的后验密度函数与$\pi(\theta)$有相同的函数形式，
+则称$\pi(\theta)$是$\theta$的*共轭先验分布*。   
+&emsp;&emsp;共轭先验分布的选取是由似然函数$L(\theta)=p(x|\theta)$中所含$\theta$的因式决定的，
+即选与似然函数具有相同核的分布作为先验分布。   
+
+
+&emsp;&emsp;表1 常用共轭先验分布
+
+|总体分布 | 参数 | 共轭先验分布|
+|---- | ---- | ----|
+|二项分布 | 成功概率 | 贝塔分布|
+|泊松分布 | 均值|伽玛分布|
+|指数分布 | 均值的倒数|伽玛分布|
+|正态分布（方差已知） | 均值|正态分布|
+|正态分布（均值已知） | 方差|伽玛分布|
+
+  
+### 1.1 二项模型   
+&emsp;&emsp;设总体$X \sim b(n,\theta)$,其密度函数中与$\theta$有关部分（核）为$\theta^x(1-\theta)^{n-x}$。
+由此设$\theta$的先验分布为贝塔分布$Be(\alpha,\beta)$。求后验分布。
+
+
+### 1.2 泊松模型    
+&emsp;&emsp;设$x_1,\dots,x_n$是来自泊松分布$Exp(\lambda)$的一组样本观察值。
+基于共轭先验求后验分布。
+
+### 1.3 指数模型    
+&emsp;&emsp;设$x_1,\dots,x_n$是来自指数分布$Exp(\lambda)$的一组样本观察值。
+基于共轭先验求后验分布。   
+
+### 1.4 正态模型（方差已知） 
+&emsp;&emsp;设$x_1,\dots,x_n$是来自正态分布$N(\theta,\sigma^2)$的一组样本观察值。
+其中$\sigma_2$已知。基于共轭先验求后验分布。
+
+### 1.5 正态模型（均值已知）    
+&emsp;&emsp;设$x_1,\dots,x_n$是来自正态分布$N(\theta,\sigma^2)$的一组样本观察值。其中$\theta$
+已知。现取倒伽玛分布$Ga(\alpha,\lambda)$作为正态方差$\sigma^2$的先验分布(不是$\sigma$)。
+其中$\alpha$和$\lambda$已知。基于共轭先验求后验分布。
+
+表2 常用共轭先验分布 
+\begin{array}{c|lc}
+ n & 似然  & 先验  & 后验 \\
+1 & Y \sim Bin(1,\theta)  & \theta \sim beta(\alpha,\beta)  & \theta|y \sim beta(x+\alpha,n-x+\beta)  \\
+2 & Y \sim Poisson(\theta)  & \theta \sim gamma(\alpha,\beta)  & \theta|y \sim beta(n \bar{x}+\alpha,n+\beta)  \\
+3 & Y \sim Exp(\theta)  & \theta \sim gamma(\alpha,\beta)  & \theta|y \sim gamma(n+\alpha,n\bar{x} + \beta)  \\
+4 & Y \sim N(\theta,\sigma^2)  & \theta \sim N(\mu,\tau^2)  & \theta|y \sim N(\frac{n/\sigma^2}{n/\sigma^2+1/\tau^2} \bar{x}+\frac{1/\tau^2}{n/\sigma^2+1/\tau^2} \mu, \frac{1}{n/\sigma^2+1/\tau^2} ) \\
+5 & Y \sim N(\theta,\sigma^2)  & \sigma^2 \sim invgamma(\alpha,\beta)  & \sigma^2|y \sim invgamma(n/2+\alpha,\sum(x_i-\theta)^2/2 + \beta) 
+\end{array}
+
+
+## 2.无信息先验  
+
+**如果没有先验信息，如何确定先验分布？**    
+&emsp;&emsp;Bayes用的是贝叶斯假设，就是拉普拉斯先验。什么场合可使用贝叶斯假设？    
+
+如果不能使用贝叶斯假设，无信息先验又如何确定？    
+
+&emsp;&emsp;首先要知道该参数$\theta$在总体分布中的地位，是位置参数，还是尺度参数？    
+
+&emsp;&emsp;根据参数在分布的地位选用适当变换下的不变性来确定其无信息先验。
+
+&emsp;&emsp;当$\theta$为位置参数时，其先验分布可用贝叶斯假设作为无信息先验。    
+
+&emsp;&emsp;当$\theta$为尺度参数时，其先验分布不可以用贝叶斯假设作为无信息先验。
+
+&emsp;&emsp;求无信息先验大致有三种方法：Jeffreys先验,reference先验,概率匹配先验。后两种比较复杂，此处不介绍。   
+
+### *Jeffreys先验 *   
+&emsp;&emsp;Jeffreys(1961)用Fisher信息量（阵）给出参数$\theta$的无信息先验。    
+&emsp;&emsp;C-R正则族是Fisher信息量（阵）存在的条件。常用分布族大多属于C-R正则族。
+&emsp;&emsp;无信息先验公式如下
+\[\pi(\theta)=|I(\theta)|^{\frac{1}{2}}\]
+即Fisher信息量（阵）行列式的平方根。    
+
+归纳一下：位置参数的无信息先验是1，尺度参数的无信息先验是其倒数，一般性参数的无信息先验是Jeffreys先验。
+
+&emsp;&emsp;例1：设$x_1,\dots,x_n$是来自多项分布$M(n,\theta_1,\cdots,\theta_n)$的一组样本观察值。
+求参数向量$(\mu,\theta_1,\cdots,\theta_n)$的Jeffreys先验。 
+
+
+&emsp;&emsp;例2：设$x_1,\dots,x_n$是来自正态分布$N(\mu,\sigma^2)$的一组样本观察值。
+求参数向量$(\mu,\sigma)$的Jeffreys先验。    
+
+&emsp;&emsp;例3:求二项模型成功概率的Jeffreys先验。    
+
+## 3.弱信息先验   
+&emsp;&emsp;弱信息先验意味着未知参数先验分布的方差很大，也就是关于参数的信息很少，很不确定。
+
+&emsp;&emsp;比如在正态模型（方差已知）中，$y_i \sim N(\theta,\sigma^2)$，并且$\theta \sim N(\mu,\tau^2)$。
+如果$\tau=100$,则$\tau^2=100^2$,方差就很大了。    
+
+&emsp;&emsp;也可以设$\theta \sim C(\mu,\lambda)$。因为柯西分布没有期望和方差，被视为弱信息分布。当参数非负时，经常采用半柯西分布。
+
+# 第五章 贝叶斯推断   
+
+## 5.1 点估计   
+
+*定义5.1*         
+
+&emsp;&emsp;使后验密度$\pi(\theta|x)$达到最大的值$\hat\theta_{MD}$称为$\theta$的*最大后验估计*；   
+&emsp;&emsp;后验分布的中位数$\hat\theta_{ME}$称为$\theta$的*后验中位数估计*；  
+&emsp;&emsp;后验分布的期望值$\hat\theta_{E}$称为$\theta$的*后验期望估计*。   
+
+例5.1.1 对一儿童做智力测验，设测验结果$X \sim N(\theta,100)$,其中$\theta$在心理学中定义为该儿童的智商。根据过去多次测验，可设$\theta \sim N(100,225)$.应用上述方法，在$n=1$时，可得在给定$X=x$条件下，该儿童智商$\theta$的后验分布是正态分布$N(\mu_1,\sigma_1^2)$.假如该儿童这次测验得分为115分，则他智商的贝叶斯估计为多少？   
+
+
+
+例5.1.2 为估计不合格品率，今从一批产品中随机抽取$n$件，其中不合格品数$X$服从二项分布$b(n,\theta)$.$\theta \sim Be(\alpha,\beta)$.       
+(1)求$\theta$的后验分布。       
+(2)当$\alpha=\beta=1$,求$\theta$的后验分布.    
+
+
+
+
+例5.1.3 设$x$是来自如下指数分布的一个观察值。
+\[p(x|\theta)=e^{-(x-\theta)}, x \ge \theta\]
+又取柯西分布作为$\theta$的先验分布，即
+\[\pi(\theta)=\frac{1}{\pi(1+\theta^2)}, -\infty<\theta < \infty\]
+寻找$\theta$的最大后验估计。       
+
+
+### 贝叶斯估计的误差    
+
+*后验均方差 *   
+\[MSE(\hat \theta|x)=E^{\theta|x}(\theta-\hat \theta)^2\]
+*后验方差*
+\[Var(\theta|x)=E^{\theta|x}(\theta-\hat \theta_E)^2\]
+后验均方差与后验方差有如下关系
+\[\begin{equation}
+MSE(\hat \theta|x)=E^{\theta|x}(\theta-\hat \theta)^2 \\
+=E^{\theta|x}[(\theta-\theta_E)+(\theta_E - \hat \theta)]^2  \\
+=Var(\theta|x)+(\theta_E - \hat \theta)^2
+\end{equation} \]
+
+例5.1.4 设一批产品的不合格品率为$\theta$，检查是一个接一个第进行，直到发现第一个不合格品停止检查。若设$X$为发现第一个不合格品时已检查的产品数，则$X$服从几何分布，其分布列为
+\[p(X=x|\theta=1)=\theta (1-\theta)^{x-1}\]
+假如其中参数$\theta$只能为1/4,2/4和3/4三个值，并以相同概率取这三个值，如今只获得一个样本观察值$x=3$,要求$\theta$的最大后验估计$\hat\theta_{MD}$,并计算它的误差。
+
+
+
+例5.1.5 求例2.2.2的最大后验估计量的后验均方差。
+
+
+例5.1.6 设$x=(x_1,\cdots,x_n)$是来自均匀分布$U(0,\theta)$的一个样本，若$\theta \sim IGa(\alpha,\lambda)$的先验分布为IGA,要求$\theta$的后验均值，其中$\alpha$和$\lambda$已知。
+
+
+```{r warning=FALSE,message=FALSE}
+install.packages("invgamma",repos = 'www.rstudio.com/CRAN')     #安装包
+library(invgamma)			     #加载包
+alpha <- 2; lambda <- 8; n <- 5; y <- 2       #赋值
+(lambda/(alpha+n-1))*pinvgamma(y, shape = alpha+n-1, rate= lambda, lower.tail = F)/
+pinvgamma(y, shape = alpha+n, rate= lambda, lower.tail = F)
+
+```
+
+例5.1.7 经过早期筛选后的彩色电视机接收机的寿命服从指数分布，它的密度函数为
+\[p(t|\theta)=\theta^{-1}e^{-t/\theta},t>0\]
+其中$\theta$是彩电的平均寿命。现从一批彩电中随机抽取$n$台进行寿命试验，试验到第$r(\le n)$ 台失效为止，其失效时间为$t_1 \le t_2 \le \cdots \le t_r$ ，另外$n-r$ 台彩电直到试验停止时（$t_r$ ）还未失效。 $\theta$的先验分布选用逆Gamma分布 。求彩电平均寿命 的贝叶斯估计和0.9可信下限。
+
+```{r}
+p <- 0.9; shape <- (1.956+0); rate <- (2868+40000) 		#指定参数
+qinvgamma(p, shape, scale = 1/rate, lower.tail = F) 	   #求分位数
+
+```
+
+## 5.2 区间估计       
+
+*定义5.2*   
+
+设参数$\theta$的后验分布为$\pi(\theta|x)$,对给定的样本$x$和概率$1-\alpha(0<\alpha<1)$，若存在这样的两个统计量$\hat \theta_L=\hat \theta_L(x)$与$\hat \theta_U=\hat \theta_U(x)$,使得
+\[P(\theta_L \le \theta \le \theta_U|x) \ge 1-\alpha\]
+则称区间$[\theta_L,\theta_U]$为参数$\theta$的可信水平为$1-\alpha$贝叶斯可信区间，或简称为$\theta$的$1-\alpha$*可信区间*(credible interval).    
+而满足
+\[P( \theta \ge \theta_L|x) \ge 1-\alpha\]
+的$\theta_L$称为$\theta$的$1-\alpha$*可信下限*。        
+满足
+\[P(\theta \le \theta_U|x) \ge 1-\alpha\]
+的$\theta_U$称为$\theta$的$1-\alpha$*可信上限*。 
+
+比较贝叶斯可信区间和经典统计置信区间的区别(confidence interval).
+
+### *最大后验密度可信区间(HPD CI)*
+HPD interval is a region that satisfies the following two conditions:   
+
+The posterior probability of that region is.    
+
+The minimum density of any point within that region is equal to or larger than the density of any point outside that region.   
+
+The HPD is an interval in which most of the distribution lies. Some tatisticians prefer this interval because it is the smallest interval.
+
+## 5.3 后验预测分布与模型检验   
+
+## 5.3.4 预测   
+对随机变量未来观察值做出统计推断称为预测，有以下3种情形：       
+1.设随机变量$X \sim p(x|\theta)$,在参数$\theta$未知情况下,如何对$X$的未来观察值做出推断；    
+
+2.设$x_1,\cdots,x_n$是来自$p(x|\theta)$的过去观察值，在参数$\theta$未知情况下,如何对$X$的未来观察值做出推断； 
+
+3.按密度函数$p(x|\theta)$得到一些数据$x_1,\cdots,x_n$后，如何对具有密度函数$g(z|\theta)$的随机变量$Z$的未来观察值做出推断，这里二个密度函数$p$和$g$都具有相同的未知参数$\theta$.   
+
+无数据下，*先验预测分布*
+\[m(x)=\int_\Theta p(x|\theta) \pi(\theta)d{\theta}\]
+
+有数据下，*后验预测分布*
+\[m(x'|x)=\int_\Theta p(x|\theta) \pi(\theta|x)d{\theta}\]
+\[m(z|x)=\int_\Theta g(z|\theta) \pi(\theta|x)d{\theta}\]
+
+例5.5.1 一赌徒在10次赌博中赢3次，现要对未来5次赌博中他赢的次数$z$做出预测。先验是贝叶斯假设。 
+
+
+例5.5.2 如果该赌徒没有前10次赌博经历，而要对未来$k$次赌博中他赢的次数$z$做出预测。先验是贝叶斯假设。
+
+
+
+例5.5.3 一颗钻石在一架天平上重复称重$n$次，结果为$x_1,\cdots,x_n$，若把这颗钻石放在另一架天平上称重，如何对其称量值做出预测。    
+
+设第一架天平的称量值$X \sim N(\theta,\sigma^2)$,且$\sigma^2$已知.       
+$\theta \sim N(\mu,\tau^2)$,其中$\mu$和$\tau^2$都已知。     
+
+设第二架天平的称量值$Z \sim N(\theta,\sigma_2^2)$,分布是$g(z|\theta)$.
+
+
+
+
+# 第6章 &emsp;&emsp; 贝叶斯计算与MCMC         
+
+## 什么是MCMC  
+
+&emsp;&emsp;贝叶斯统计分析涉及很多积分运算，特别是后验积分的积分运算。    
+&emsp;&emsp;考虑如下积分
+\[\hat {g(\theta)}=\int{g(\theta)\pi(\theta |x)}d\theta\]
+即$g(\theta)$的后验均值$E[(g(\theta)|x)]$。显然，可以用下面的平均值近似求得。
+\[\bar {g}= \frac{1}{m}\sum_{i=1}^{m}g(\theta^{(i)})\]
+&emsp;&emsp;其中$\theta^{(1)},\dots,\theta^{(m)}$是来自后验分布$\pi(\theta |x)$的容量为$m$的样本。
+&emsp;&emsp;如果此样本为独立的，则由大数定理，样本均值$\bar {g}$依概率收敛到$E[(g(\theta)|x)]$。这种技术称为蒙特卡洛（Monte Carlo）方法。    
+&emsp;&emsp;但是在有些问题中，从$\pi(\theta |x)$抽取独立的样本非常困难。然而，如果通过某种方法可以获得从
+$\pi(\theta |x)$的一个非独立“样本”（严格地讲是一条链在一些状态下的值），但具有一些好的性质，
+且与从$\pi(\theta |x)$中抽取的独立样本的作用是一样的，那么蒙特卡洛方法仍然可以使用。
+这就是蒙特卡洛马尔科夫链（Monte Carlo Markov Chain，MCMC）。    
+&emsp;&emsp;因此，MCMC就是基于马尔科夫链从目标分布抽取随机“样本”，用平均值估计积分。    
+&emsp;&emsp;单参数模型的抽样比较简单，这里分析多参数模型。    
+&emsp;&emsp;在多参数模型中，一般先考虑是否可以直接得到某参数或参数的函数的后验分布；    
+&emsp;&emsp;若无法得到其显式表示，则再考虑是否可以将联合后验分布进行分解，然后进行分步抽样，
+其优点是无需进行收敛性判断。        
+&emsp;&emsp;在分解方法都无法进行时再考虑Gibbs抽样等MCMC方法，但需要对马尔科夫链的收敛性进行判断。   
+&emsp;&emsp;大量复杂的统计模型都用最后一种方法解决，因此具有普遍的意义。       
+
+## Gibbs抽样
+&emsp;&emsp;需要参数的满条件后验分布。    
+&emsp;&emsp;在Gibbs抽样中，称
+\[\pi(\theta_j|\theta_{-j},x)=\frac{\pi(\theta_j|\theta_1,\cdots,\theta_{j-1},\theta_{j+1},\cdots|x)}
+{\int \pi(\theta_j|\theta_1,\cdots,\theta_{j-1},\theta_{j+1},\cdots|x)d{\theta_j}}\]
+为$\theta_j$的满条件后验分布(full conditional distribution)
+
+&emsp;&emsp;假设模型有$p$个参数。   
+&emsp;&emsp;算法如下：       
+&emsp;&emsp;1.给定参数的初始值：$\theta_1^{(0)},\dots,\theta_p^{(0)}$;     
+&emsp;&emsp;2.对$t=0,1,2,\dots$进行下面的迭代更新   
+&emsp;&emsp;a)从分布$\pi(\theta_1|\theta_2^{(t)},\dots,\theta_p^{(t)},x)$中产生$\theta_1^{(t+1)}$;    
+&emsp;&emsp;b)从分布$\pi(\theta_2|\theta_1^{(t)},\theta_3^{(t)},\dots,\theta_p^{(t)},x)$中产生$\theta_2^{(t+1)}$;    
+&emsp;&emsp;$\cdots$      
+&emsp;&emsp;c)从分布$\pi(\theta_p|\theta_1^{(t)},\theta_2^{(t)},\dots,\theta_{p-1}^{(t)},x)$中产生$\theta_2^{(t+1)}$;
+
+&emsp;&emsp;由此产生马尔科夫链$\theta^{(0)},\theta^{(1)},\cdots,\theta^{(t)},\cdots$。 
+
+
+## MH抽样
+&emsp;&emsp;如果某个满条件分布不容易抽样，则可以借助Metropilis-Hastings算法(MH算法)进行抽样。    
+&emsp;&emsp;MH算法需要建议分布。    
+&emsp;&emsp;算法如下：    
+&emsp;&emsp;1.构造合适的建议分布$q(\cdot|\theta^{(t)})$;    
+&emsp;&emsp;2.从某个分布$g$中产生$\theta^{(0)}$;    
+&emsp;&emsp;3.重复下面过程，直至马尔科夫链达到平衡状态      
+&emsp;&emsp;a)从$q(\cdot|\theta^{(t)})$中产生候选点$\theta^{(cand)}$;    
+&emsp;&emsp;b)从均匀分布$U(0,1)$中产生U;    
+&emsp;&emsp;c)判断：如果$U \le \frac{\pi(\theta^{(cand)}|x)q(\theta^{(t))}|\theta^{(cand)})}{\pi(\theta^{(t)}|x)q(\theta^{(cand)}|\theta^{(t)})}$，则接受$\theta^{(cand)}$，并令$\theta^{(t+1)}=\theta^{(cand)}$，否则令$\theta^{(t+1)}=\theta^{(t)}$;    
+&emsp;&emsp;d)增加$t$，返回到a)。    
+&emsp;&emsp;Gibbs抽样法是一种特殊的MH算法，其中的每一个候选点都被接受。   
+&emsp;&emsp;MH算法具有普遍意义。 
+
+## 汉密尔顿抽样   
+&emsp;&emsp; MH可能会造成两个问题：    
+&emsp;&emsp; a)如果建议分布是对称的，计算$\alpha$时会被消掉，可能会花费很长时间才能收敛到平衡分布；            
+&emsp;&emsp; b)MH算法的拒绝率和transition kernel有关，我们希望拒绝率尽量低。       
+Hamiltonian Monte Carlo（HMC）算法能很好的缓解上面的两个问题。        
+  
+&emsp;&emsp; 后验分布为
+\[\pi(\theta_1,\theta_2,\cdots,\theta_d|y)\]
+增加辅助变量$r_1,r_2,\cdots,r_d$,辅助变量的概率密度为$\pi(r_1,r_2,\cdots,r_d)$。
+该估计参数和辅助变量的联合分布定义为
+\[\pi(\theta_1,\theta_2,\cdots,\theta_d,r_1,r_2,\cdots,r_d|y)：= \pi(\theta_1,\theta_2,\cdots,\theta_d|y)\pi(r_1,r_2,\cdots,r_d)\]
+或者向量表示为
+\[\pi(\theta,r|y) = \pi(\theta|y)\pi(r)\]
+定义汉密尔顿系统为
+\begin{equation}
+\begin{split}
+& H(\pi(\theta_1,\theta_2,\dots,\theta_d,r_1,r_2,\dots,r_d|y):= -log(\pi(\theta,r|y) )\\
+& =-log(\pi(\theta|y)\pi(r))\\
+& =-log(\pi(\theta|y))-log(\pi(r))\\
+& = T(r|\theta) + V(r)
+\end{split}
+\end{equation}
+第一项表示动量能，第二项表示势能。因为两者是独立的，$\pi(r|\theta)$=$\pi(r)$。
+
+\[\frac{d\theta}{dt}=+\frac{\partial{T}}{\partial{r}}\]
+\[\frac{dr}{dt}=-\frac{\partial{V}}{\partial{\theta}}\]
+
+&emsp;&emsp;具体算法如下：   
+
+输入：起点$\theta_1$和步长$\epsilon$
+for $t=1,2,\cdots$ do
+
+对动量$r$进行取样
+\[r(t)=N(0,M)\]
+\[(\theta_0,r_0)=(\theta^{(t)},r^{(t)})\]
+模拟汉密尔顿动力学的离散化
+\[r_0 \gets r_0- \frac {\epsilon}{2} \nabla U(\theta_0) \]
+for $i=1$ to $m$ do
+\[\theta_i \gets \theta_{i-1}- \epsilon M^{-1} r_{i-1}\]
+\[r_i \gets r_{i-1}- \epsilon \nabla U(\theta_m)\]
+end
+\[r_m \gets r_{m}-\frac {\epsilon}{2} \nabla U(\theta_m)\]
+\[(\hat{\theta},\hat{r})=(\theta_m,r_m)\]
+Metropolis-Hastings correction:       
+\[u \sim Uniform(0,1)\]
+\[\rho = e^{H(\hat{\theta},\hat{r})-H(\theta_m,r_m)}\]
+if $u < min(1,\rho)$ ,then $\theta^{(t+1)}=\hat{\theta}$
+
+### 一个例子：纽约马拉松成绩        
+
+这里用一个例子说明模拟技术在贝叶斯教学的应用。例子来自茆诗松、汤银才的《贝叶斯统计（第二版）》（中国统计出版社2012年出版）[7]。例题如下：
+在一次纽约举行的男子马拉松比赛中，抽取年龄在20至29岁的20位选手，记录其完成整个赛程所用的时间(单位为分钟)。记20位选手马拉松比赛的成绩为$y_1,y_2,\cdots,y_n$ 。假定它们为来自正态分布$N(\mu,\sigma^2)$ 的样本，并取$(\mu,\sigma^2)$的先验分布为 Jeffreys无信息先验分布，
+	 \[\pi (\mu ,{{\sigma }^{2}})\propto \frac{1}{{{\sigma }^{2}}}\] 	(9)
+则$(\mu,\sigma^2)$后验分布具有形式
+	  \[\pi (\mu ,{{\sigma }^{2}}|y)\propto \frac{1}{{{({{\sigma }^{2}})}^{n/2+1}}}\exp \{-\frac{1}{2{{\sigma }^{2}}}[(n-1){{s}^{2}}+n{{(\mu -\bar{y})}^{2}}]\}\]	(10)
+其中 $n$为样本容量， $\bar{y}=\sum\limits_{i=1}^{n}{{{y}_{i}}}/n$为样本均值， ${{s}^{2}}=\sum\limits_{i=1}^{n}{{{({{y}_{i}}-\bar{y})}^{2}}}/(n-1)$为样本方差。在此它们分别为$n=20,\bar{y}=277.6,{{s}^{2}}=2454.042$ 。
+
+Gibbs采样器需要得到参数的满条件分布。从公式(10)可以看出 $\mu$和$\sigma^2$ 的满条件分布如下：
+\[\begin{align}
+  & \pi (\mu |{{\sigma }^{2}},y)\tilde{\ }\exp \{-\frac{n}{2{{\sigma }^{2}}}{{(\mu -\bar{y})}^{2}}\} \\ 
+ & \pi ({{\sigma }^{2}}|\mu ,y)\tilde{\ }\frac{1}{{{({{\sigma }^{2}})}^{n/2+1}}}\exp \{-\frac{1}{2{{\sigma }^{2}}}[(n-1){{s}^{2}}+n{{(\mu -\bar{y})}^{2}}]\} \\ 
+\end{align}\]
+因而$\mu |{{\sigma }^{2}},y\tilde{\ }normal(\bar{y},\frac{{{\sigma }^{2}}}{n})$，${{\sigma }^{2}}|\mu ,y\tilde{\ }IGa(n/2,[(n-1){{s}^{2}}+n{{(\mu -\bar{y})}^{2}}]/2)$
+
+```{r message=FALSE,warning=FALSE,cache=TRUE}
+rm(list=ls())
+library(tidyverse)
+y <- c(182,201,221,234,237,251,261,266,267,273,
+       286,291,292,296,296,296,326,352,359,365)	
+n <- length(y); iter <- 2*10^3; chains <- 4
+
+# M-H代码如下：
+log_post <- function(y,mu,sd){  
+  likelihoods <-  sum(dnorm(y, mean = mu, sd = sd, log = T))  #对数似然函数
+prior <- -2*log(sd)              #对数先验
+  posterior <-  likelihoods + prior   #对数后验似然函数
+  return (posterior)
+}
+# mu的更新函数
+mu_update <- function(y,mu,sd){
+  mu_new <- mu + rnorm(1,0,100)
+  r  <- exp(log_post(y,mu_new,sd)-log_post(y,mu,sd))
+  mu <- ifelse(runif(1) < r,mu_new,mu)
+}
+# sd的更新函数
+sd_update <- function(y,mu,sd){
+  sd_new <- sd + runif(1,min = -30,max = 30)
+  r  <- exp(log_post(y,mu,sd_new)-log_post(y,mu,sd))
+  sd <- ifelse(runif(1) < r,sd_new,sd)
+}
+#设置容器和参数名
+sims <- array (NA, c(iter, chains, 2))
+dimnames (sims) <- list (NULL, NULL, c("mu", "sd"))
+#生成多条马尔科夫链
+for (m in 1:chains){
+  mu <- rnorm (1, mean(y), sd(y))
+  sd <- runif(1,min = sd(y)-30,max = sd(y)+30)
+  for (t in 1:iter){
+    mu <- mu_update (y,mu,sd)
+    sd <- sd_update (y,mu,sd)
+    sims[t,m,] <- c(mu,sd)
+  }
+}
+rstan::monitor (sims)  #输出MCMC抽样摘要并监控收敛情况
+
+# Gibbs代码如下：
+#设置满条件分布
+mu_update <- function(y,sd){
+  mu <- rnorm(1,mean(y),sqrt(sd^2/n)) 
+}
+sd_update <- function(y,mu){
+  variance <- invgamma::rinvgamma(1,shape = n/2,rate = ((n-1)*sd(y)^2 + n*(mu-mean(y))^2)/2)
+  sd <- sqrt(variance)
+  return(sd)
+}
+#设置容器和参数名
+sims <- array (NA, c(iter, chains, 2))
+dimnames (sims) <- list (NULL, NULL, c("mu", "sd"))
+#生成多条马尔科夫链
+for (m in 1:chains){
+  mu <- rnorm (1, mean(y), sd(y))
+  sd <- runif(1,min = sd(y)-30,max = sd(y)+30)
+  for (t in 1:iter){
+    mu <- mu_update(y,sd)
+    sd <- sd_update(y,mu)
+    sims[t,m,] <- c(mu,sd)
+  }
+}
+rstan::monitor (sims)
+
+# HMC代码如下：
+#对数后验似然函数
+log_p_th <- function (th, y){                    
+  mu <- th[1];  sd <- th[2]
+  if (is.nan(sd) | sd <= 0)
+    return (-Inf)
+  else{
+    log_prior <- -2*log(sd)
+    log_likelihood <- sum (dnorm (y, mu, sd, log=TRUE))
+    return (log_prior + log_likelihood)
+  }
+}
+#对数后验似然函数的梯度
+gradient_th <- function (th, y){                    
+  mu <- th[1];  sd <- th[2]
+  if (sd <= 0)
+    return (c(0,0))
+  else {
+    d_mu <- -n*(mu - mean(y))/sd^2
+    d_sd <- -2*(n/2+1)/sd + ((n-1)*sd(y)^2 + n*(mu-mean(y))^2)/sd^3
+  }
+}
+#产生单个的建议点
+hmc_iteration <- function (th, y, epsilon, L, M) {
+  M_inv <- 1/M
+  d <- length (th)
+  phi <- rnorm (d, 0, sqrt(M))
+  th_old <- th
+  log_p_old <- log_p_th (th,y) - 0.5*sum(M_inv*phi^2)
+  phi <- phi + 0.5*epsilon*gradient_th (th, y)
+  for (l in 1:L){
+    th <- th + epsilon*M_inv*phi
+    phi <- phi + (if (l==L) 0.5 else 1)*epsilon*gradient_th(th,y)
+  }
+  phi <- -phi
+  log_p_star <- log_p_th (th,y) - 0.5*sum(M_inv*phi^2)
+  r <- exp (log_p_star - log_p_old)
+  if (is.nan(r)) r <- 0
+  p_jump <- min(r,1)
+  th_new <- if (runif(1) < p_jump) th else th_old
+  return (list (th=th_new, p_jump=p_jump))
+}
+#创建产生多条马尔科夫链的函数
+hmc_run <- function (starting_values, iter, epsilon_0, L_0, M) {
+  chains <- nrow (starting_values)
+  d <- ncol (starting_values)
+  sims <- array (NA, c(iter, chains, d),
+                 dimnames=list (NULL, NULL, colnames (starting_values)))
+  warmup <- 0.5*iter
+  p_jump <- array (NA, c(iter, chains))
+  for (j in 1:chains){
+    th <- starting_values[j,]
+    for (t in 1:iter){
+      epsilon <- runif (1, 0, 2*epsilon_0)
+      L <- ceiling (2*L_0*runif(1))
+      temp <- hmc_iteration (th, y, epsilon, L, M)
+      p_jump[t,j] <- temp$p_jump
+      sims[t,j,] <- temp$th
+      th <- temp$th
+    }
+  }
+  rstan::monitor (sims, warmup)
+  cat ("Avg acceptance probs:",
+       round(colMeans(p_jump[(warmup+1):iter,]),2),"\n")
+  return (list (sims=sims, p_jump=p_jump))
+}
+
+parameter_names <- c ("mu", "sd")
+d <- length (parameter_names)
+#产生初始值
+mass_vector <- rep (1/15^2, d)
+starts <- array (NA,c(chains,d),dimnames=list(NULL,parameter_names))
+for (j in 1:chains){
+  starts[j,1] <- rnorm (1,mean(y),sd(y))
+  starts[j,2] <- runif (1,sd(y)-30,sd(y)+30)
+}
+#产生多条马尔科夫链
+hmc_sim <- hmc_run (starting_values = starts, iter = iter,
+               epsilon_0 = .05, L_0 = 20, M = mass_vector)
+
+
+
+```
+
+
+
+
+# 第7章&emsp;&emsp; MCMC与RStan   
+
+## 什么是Rstan？       
+&emsp;&emsp; 目前可用于贝叶斯计算的软件包括WinBUGS, OpenBUGS，JAGS（Just Another Gibbs Sampler）和Stan。WinBUGS和OpenBUGS隶属于BUGS（Bayesian Inference Using Gibbs Sampling）项目。该项目由剑桥大学医学研究委员会生物统计部（The Medical Research Council Biostatistics Unit）主持，启动于1989年。最初的版本是运行在linux上的，后来移植到Windows下发展成为WinBUGS（与帝国理工医学院合作）。WinBUGS已经停止更新，上一次发布是在2007年8月。OpenBUGS是赫尔辛基大学开发的WinBUGS的开源版本，最后一次发布是在2014年。JAGS是英国华威大学 Martyn Plummer基于BUGS语言开发的。Stan项目以提出蒙特卡洛方法的 Stanislaw Ulam命名，由哥伦比亚大学的Andrew Gelman带领团队开发。       
+&emsp;&emsp; Stan和JAGS可以用于相同的问题，但两者有着显著不同。JAGS是BUGS的变体，类似于WinBUGS和OpenBUGS，模型仅说明变量之间的关系。而Stan里的模型被明确定义为几个部分，其中语句的顺序对执行是有影响的。WinBUGS和OpenBUGS都是用Component Pascal编写的，这是一种小众语言，开发难度很大。JAGS和Stan都用C++编写。而且JAGS和Stan都是跨平台的，也可以在64-bit平台上以64-bit应用来进行编译。因此，初学者的选择无非是JAGS抑或Stan。        
+&emsp;&emsp; RStan是Stan的R接口。它有个对应的“rstan”包在CRAN上发布，其源代码托管在GitHub上。        
+
+## Rstan的结构        
+&emsp;&emsp; 基于RStan求解贝叶斯模型的流程如下：   
+&emsp;&emsp; ①指定环境   
+```{r message=FALSE,warning=FALSE}
+# install.packages("StanHeaders", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+# install.packages("rstan", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+library(rstan) #加载包
+options(mc.cores = parallel::detectCores()) #并行估计模型
+rstan_options(auto_write = TRUE) #将已编译的Stan程序保存到硬盘上
+```
+&emsp;&emsp; 前两行代码是为了安装低版本的rstan，因为最新版本的rstan与R4.2兼容。              
+&emsp;&emsp; 后两行代码不是必需的，但可以在一定程度上提高运行速度。    
+&emsp;&emsp; ②编写一个Stan程序   
+&emsp;&emsp; 通过使用Stan建模语言编写其对数后验密度来表示统计模型。可以使用带有.stan扩展名的文本文件。也可以使用R中的字符串来完成，并以文本文件写入硬盘。    
+&emsp;&emsp; Stan程序一般分为三个模块：data、parameters和model。data需要定义两类：样本容量n和数据。parameters模块指定未知参数。model指定变量分布，可以用分布表示，也可以用似然函数表示。如果需要用转换后的数据（比如取对数）估计数据，就需要增加一个模块transformed data。如果需要对未知参数进行转换，则需要增加一个模块transformed parameters表示原始参数与转换参数的联系。有时还会增加一个模块generated quantities。任何可以根据模型计算出来的结果都可以在这里进行评估（比如R2）。更重要的是，它和其他参数一样，有一个分布。  
+&emsp;&emsp; 需要指出的是，Stan中的赋值是 =，而分布用～指定，注释用//或者\* \*指定。注意，与教材正态分布的表示不同，RStan语句里的normal(·, ·)第二个参数表示的是标准差，而不是方差。   
+
+&emsp;&emsp; ③准备数据（通常是一个列表）        
+       
+&emsp;&emsp; ④拟合模型并汇总        
+  
+&emsp;&emsp; 从模型拟合函数返回的对象是类stan的S4对象stanfit。       
+&emsp;&emsp; ⑤诊断与其他        
+&emsp;&emsp; 可以使用典型的贝叶斯诊断工具，如轨迹图、密度图等。此外rstan包带有模型比较功能，如WAIC和loo函数。        
+
+## 一个例子  
+
+```{r cache=TRUE,message=FALSE,eval=FALSE}
+rm(list=ls())
+# devtools::install_github("stan-dev/cmdstanr")
+# library(cmdstanr)
+# install_cmdstan()
+library(rstan)
+mystan <- "
+data {
+  int < lower = 1 > n; 
+  vector[n] y; 
+}
+parameters {
+  real mu; 
+}
+model {
+// priors
+  mu ~ normal(0.0, 5); 
+// likelihood
+  y ~ normal(mu, 2);
+}
+"
+write(mystan,file = "mystan.stan")  #写入硬盘
+set.seed( 123 ) 	#随机种子
+n <- 100 			#样本量
+mu_chosen <- 5 		#均值μ
+sigma_chosen <- 2 		#标准差σ
+y <- rnorm(n, mu_chosen, sigma_chosen) 		#生成n个正态随机数
+
+# ③准备数据（通常是一个列表）
+data_for_Stan <- list(y = y, n = length(y))
+# ④拟合模型并汇总
+fit <- stan(file = "mystan.stan", data = data_for_Stan)
+fit
+
+# conjugate
+mystan_conjugate <- "
+data {
+  int < lower = 1 > n; 
+  vector[n] y; 
+}
+parameters {
+  real mu;
+  real<lower=0> sigma2; 
+}
+transformed parameters {
+  real<lower=0> sigma;
+  sigma = sqrt(sigma2);
+}
+model {
+  mu ~ normal(0.0,100);
+  sigma2 ~ inv_gamma(0.001,0.001); 
+  y ~ normal(mu,sigma);
+}
+"
+write(mystan_conjugate,file = "mystan_conjugate.stan")  #写入硬盘
+fit_conjugate <- stan(file = "mystan_conjugate.stan", data = data_for_Stan)
+fit_conjugate
+#weakly 
+mystan_weakly <- "
+data {
+  int < lower = 1 > n; 
+  vector[n] y; 
+}
+parameters {
+  real mu; 
+  real < lower = 0 > sigma; 
+}
+model {
+  mu ~ normal(0.0, 100); 
+  sigma ~ cauchy(1, 10); 
+  y ~ normal(mu, sigma);
+}
+"
+write(mystan_weakly,file = "mystan_weakly.stan")  #写入硬盘
+fit_weakly <- stan(file = "mystan_weakly.stan", data = data_for_Stan)
+fit_weakly
+
+# jeffreys
+mystan_jeffreys <- "
+data {
+  int < lower = 1 > n; 
+  vector[n] y; 
+}
+parameters {
+  real mu; 
+  real < lower = 0 > sigma; 
+}
+model {
+  target += -2*log(sigma);
+  target += normal_lpdf(y | mu, sigma);
+  
+}
+"
+write(mystan_jeffreys,file = "mystan_jeffreys.stan")  #写入硬盘
+fit_jeffreys <- stan(file = "mystan_jeffreys.stan", data = data_for_Stan)
+fit_jeffreys
+```
+# 第8章 单参数模型      
+这个案例来自gelman(2017)的bayesian data analysis的章节2.7。
+
+## 案例1：癌症病发率的有信息先验分布   
+
+### 背景   
+
+### 模型构建    
+
+### R代码   
+
+
+# 第9章 多参数模型      
+
+## 案例1：一个毒理学实验分析    
+
+### 背景        
+
+### 模型构建    
+
+### R代码   
+
+# 第10章 分层模型        
+
+## 案例1：八校平行实验            
+
+### 背景       
+这是鲁宾（Rubin，1981 年）中经典的 "八所学校 "案例。 故事是 8 所不同的学校进行了 SAT 辅导实验。 接受辅导的学生的成绩提高情况与对照组学生的成绩提高情况进行了比较。 每所学校都得到了不同的估计值，但由于学校规模不同，标准误差也不同。
+
+### 模型构建           
+\[y \sim (\theta_j,\sigma^2)\]
+\[\theta_j = \mu + \sigma \epsilon_j,\epsilon_j \sim N(0,1))\]
+
+### R代码   
+```{r message=FALSE, warning=FALSE,cache=TRUE}
+# create dataframe
+Schools <- data.frame(row.names=c("A","B","C","D","E","F","G","H"),
+                      effect = c(28.39,7.94,-2.75,6.82,-.64,.63,18.01,12.16),
+                      see = c(14.9, 10.2, 16.3, 11.0, 9.4, 11.4, 10.4, 17.6))
+
+Schools
+```
+```{r message=FALSE, warning=FALSE}
+# Model Setup in Stan
+school8 <- '
+data {
+  int<lower=0> J;   //num of groups
+  real y[J]; 
+  real<lower=0> sigma[J]; 
+}
+parameters {
+  real mu;
+  real<lower=0> tau;
+  vector[J] eta;
+} 
+transformed parameters {
+vector[J] theta; //school effects
+theta <- mu + tau*eta;
+}
+
+model {
+  eta ~ normal(0,1);
+  y ~ normal(theta,sigma);
+}
+'
+write(school8,file='school8.stan')
+# Data preparation
+school8.dat <- list(J = nrow(Schools),y = Schools$effect,
+                    sigma=Schools$see)
+# Running Stan
+school8.fit1 <- stan(file='school8.stan', data = school8.dat)
+school8.fit1
+
+# Summaries using the base Stan functions
+print(school8.fit1,pars=c("theta","mu","tau","lp__"), probs=c(.1,.5,.9))
+# gives 50% and 95% intervals.
+plot(school8.fit1)
+
+# Traceplot shows convergence
+rstan::traceplot(school8.fit1,pars=c("mu","tau","lp__"), inc_warmup=TRUE, nrow=3)
+
+# Pair plot sometimes uncover problems with models.
+pairs(school8.fit1,pars=c("mu","theta[1]","tau"))
+```
+
+
+## 案例2：    
+
+### 背景    
+
+### 模型构建    
+
+### R代码  
+
+# 第11章 线性模型/广义线性模型
+
+## 案例1：响应变量服从正态分布-单变量回归
+### 背景    
+R基础安装中的数据集women提供了15个年
+龄在30~39岁间女性的身高(height)和体重(weight)信息，我们想通过身高来预测体重.
+### 模型构建   
+$$
+\begin{array} {l}
+weight_{i} \sim N(\theta_i,\sigma) \\
+\theta_i = \alpha +\beta height_i \\
+\alpha \sim N(50,20) \\
+\beta \sim N(0,10) \\
+\sigma \sim U(0,50) \\
+\end{array}
+$$
+
+### R代码  
+```{r message=FALSE,warning=FALSE,cache=TRUE}
+rm(list=ls())
+library(rstan) 		
+height.stan = '
+data {
+   int <lower=0> N;  //sample size
+   vector[N] y;
+   vector[N] x;
+ }
+parameters {
+real alpha;
+real beta;
+real sigma;
+ }
+model{
+alpha ~ normal(50,20);
+beta ~ normal(0,10);
+sigma ~ uniform(0,50);
+y ~ normal(alpha + beta * x,sigma);
+
+}
+'
+write(height.stan,file = "height.stan")  
+set.seed(123) 	
+
+data_for_Stan <- list( N = nrow(women),
+                       y = women$weight,x = women$height)  
+
+fit <- stan(file = "height.stan", data = data_for_Stan) 
+summary(fit)$summary[,-c(5:7)]
+
+# 比较极大似然估计与贝叶斯估计
+summary(lm(weight ~ height,data = women))
+
+```
+
+## 案例2：响应变量服从泊松分布-多元回归
+
+### 背景    
+以上身高例子中，可以通过添加一个二次项（即X2
+）来提高回归的预测精度。如果是多元回归，建议用矩阵表示。
+
+### 模型构建    
+$$
+\begin{array} {l}
+height_{i} \sim N(\theta_i,\sigma) \\
+\theta_i = \alpha + x'_i \beta \\
+\alpha \sim N(50,20) \\
+\beta \sim N(0,10) \\
+\sigma \sim U(0,50) \\
+\end{array}
+$$
+### R代码 
+```{r message=FALSE,warning=FALSE,cache=TRUE}
+rm(list=ls())
+library(rstan) 		
+height.stan = '
+data {
+   int <lower=0> N;  //sample size
+   int <lower=0> K;  //num of variables
+   vector[N] y;
+   matrix[N,K] X;
+ }
+parameters {
+real alpha;
+vector[K] beta;
+real sigma;
+ }
+model{
+alpha ~ normal(50,20);
+beta ~ normal(0,10);
+sigma ~ uniform(0,50);
+y ~ normal(alpha + X * beta ,sigma);
+
+}
+'
+write(height.stan,file = "height.stan")  
+set.seed(123) 	
+
+data_for_Stan <- list( N = nrow(women),K = ncol(women),
+                       y = women$height,
+                       X = cbind(women$weight,women$weight^2/100) ) 
+
+fit <- stan(file = "height.stan", data = data_for_Stan) 
+summary(fit)$summary[,-c(5:7)]
+
+# 比较极大似然估计与贝叶斯估计
+summary(lm(height ~ weight + I(weight^2/100),data = women))
+
+```
+
+## 案例2：logistic回归        
+### 背景            
+婚外情数据即著名的“Fair’s Affairs”，取自于1969年《今日心理》（Psychology Today）所做
+的一个非常有代表性的调查，而Greene（2003）和Fair（1978）都对它进行过分析。该数据从601
+个参与者身上收集了9个变量，包括一年来婚外私通的频率以及参与者性别、年龄、婚龄、是否
+有小孩、宗教信仰程度（5分制，1分表示反对，5分表示非常信仰）、学历、职业（逆向编号的戈
+登7种分类），还有对婚姻的自我评分（5分制，1表示非常不幸福，5表示非常幸福）
+
+### 模型构建      
+$$
+\begin{array}{}
+y_i \sim Bernoulli(p_i) \\
+log_e(\frac{p_i}{1-p_i})=X'_i\beta
+\end{array}
+$$
+
+### R代码 
+
+```{r message=FALSE,warning=FALSE,cache=TRUE}
+rm(list=ls())
+library(rstan) 		
+Affairs.stan = '
+data {
+   int <lower=0> N;  //sample size
+   int <lower=0> K;  //num of variables
+   int y[N];
+   matrix[N,K] X;
+}
+ 
+parameters {
+vector[K] beta;
+}
+
+model{
+beta ~ normal(0,10);
+y ~ bernoulli_logit(X*beta);
+}
+
+'
+write(Affairs.stan,file = "Affairs.stan")  
+set.seed(123) 	
+data("Affairs",package = 'AER')
+y <- ifelse(Affairs$affairs > 0,1,0)
+table(y)
+data_for_Stan <- list( N = nrow(Affairs), y = y,
+                       X = cbind(1,Affairs %>% select(-affairs)),
+                       K = ncol(Affairs) ) 
+
+fit <- stan(file = "Affairs.stan", data = data_for_Stan) 
+summary(fit)$summary
+
+# 比较极大似然估计与贝叶斯估计
+summary(glm((affairs > 0)*1 ~ . - affairs,data = Affairs,
+            family = binomial('logit')))
+
+```
+
+
+## 案例2：响应变量服从泊松分布
+### 背景    
+为阐述泊松回归模型的拟合过程，并探讨一些可能出现的问题，我们将使用robust包中的Breslow癫痫数据（Breslow，1993）。特别地，我们将讨论在治疗初期的八周内，抗癫痫药物对癫痫发病数的影响。继续下文前，请确定已安装robust包。
+我们就遭受轻微或严重间歇性癫痫的病人的年龄和癫痫发病数收集了数据，包含病人被随机分配到药物组或者安慰剂组前八周和随机分配后八周两种情况。响应变量为sumY（随机化后八周内癫痫发病数），预测变量为治疗条件（Trt）、年龄（Age）和前八周内的基础癫痫发病数（Base）。之所以包含基础癫痫发病数和年龄，是因为它们对响应变量有潜在影响。在解释这些协变量后，我们感兴趣的是药物治疗是否能减少癫痫发病数。
+
+### 模型构建  
+$$
+y_i \sim Poisson(\theta) \\
+log_e(\theta)=X'_i\beta
+$$
+
+### R代码  
+```{r warning=FALSE,cache=TRUE}
+ rm(list = ls())
+ data(breslow.dat, package="robust") 
+ names(breslow.dat) 
+ summary(breslow.dat[c(6,7,8,10)]) 
+ # 注意，虽然数据集有12个变量，但是我们只关注之前描述的四个变量。基础和随机化后的癫
+ # 痫发病数都有很高的偏度。现在，我们更详细地考察响应变量。如下代码可生成的图形如图13-1
+ # 所示。
+ 
+ opar <- par(no.readonly=TRUE) 
+ par(mfrow=c(1,2)) 
+ attach(breslow.dat) 
+ hist(sumY, breaks=20, xlab="Seizure Count", 
+      main="Distribution of Seizures") 
+ boxplot(sumY ~ Trt, xlab="Treatment", main="Group Comparisons") 
+ par(opar) 
+ 
+ # 拟合泊松回归：
+ library(rstan) 		
+ breslow.stan = '
+ data {
+     int <lower=0> N;  //sample size
+     int <lower=0> K;  //num of variables
+     int y[N];
+     matrix[N,K] X;
+  }
+ 
+  parameters {
+  real alpha;
+  vector[K] beta;
+  }
+
+  model{
+  alpha ~ normal(2,10);
+  beta ~ normal(0,10);
+  y ~ poisson_log_glm(X, alpha, beta);
+  }
+  
+  '
+ write(breslow.stan,file = "breslow.stan")  
+ set.seed(123) 	
+ library(tidyverse)
+ data_for_Stan <- list( N = nrow(breslow.dat), y = breslow.dat$sumY,
+                        X = cbind(breslow.dat %>% select(Base, Age, Trt)),
+                        K = 3 ) 
+ 
+ fit <- stan(file = "breslow.stan", data = data_for_Stan) 
+ fit
+
+ 
+ #  Posterior predictive model checks
+
+
+ # 接下来用频率方法拟合：
+ fit_classic <- glm(sumY ~ Base + Age + Trt, data = breslow.dat, 
+                    family = poisson()) 
+ summary(fit_classic) 
+ 
+
+```
+
+
+## 案例3：响应变量是分类变量    
+
+### 背景        
+
+
+### 模型构建       
+
+
+### R代码     
+
+## 案例4：响应变量是有序变量    
+
+### 背景        
+
+### 模型构建            
+
+### R代码         
+
+
+
+# 第12章 分层线性回归    
+
+## 案例1：睡眠时间与反应时间        
+### 背景  
+&emsp;&emsp;  Belenky et al.(2003) 研究了睡眠不足与反应时间的关系。数据集sleepstudy来自lme4包。该数据集有180个观测值，18个个体，每人观测10次。这是一个重复测量数据。以往通常用混合线性模型估计。   
+有三个变量:        
+Reaction:Average reaction time (ms);    
+Days:Number of days of sleep deprivation;   
+Subject:Subject number on which the observation was made。    
+现在用睡眠不足的时间解释反应时间。
+
+```{r}
+data(sleepstudy,package='lme4')
+table(sleepstudy$Days)
+```
+
+### 模型构建   
+最简单的模型是把所有人用一个单层模型表示，所有个体的回归系数都相同。
+\[Reaction_{ij} = \alpha+\beta Days_{ij} +\epsilon,\forall i=1,2,\cdots,N,j=1,2,\cdots,18\]
+
+另一个极端是为每个对象建立模型，因此有18个不同的模型，总共有18组回归系数，
+\[Reaction_{ij} = \alpha_{j}+\beta_{j} Days_{ij} +\epsilon_{j},\forall i=1,2,\cdots,N,J=1,2,\cdots,18\]
+
+折中的思维是，假设不同个体的回归系数$\theta=(\alpha,\beta)$来自一个共同的分布(这里取正态分布),以强调其共性。
+\[\theta \sim N(\mu,\tau^2)\]
+然后我们估计18组的后验分布以体现由不同数据得到的个性。 
+
+按照广义线性模型的记号，
+\[p(y|x_j,\beta_j) = \prod_{i=1}^N N(X_i^T \beta_j,\sigma)\]
+
+\[\beta_{jk} \sim N(\mu,\tau^2)\]
+\[\mu \sim N(0,5)\]
+\[\tau \sim Cauchy(0,5)\]
+\[\sigma \sim Cauchy(0,5)\]
+
+### R代码       
+```{r message=FALSE,warning=FALSE,cache=TRUE}
+rm(list=ls())
+library(rstan) 		
+sleep.stan = '
+data {
+   int <lower=0> N;  //sample size
+   int <lower=1> J;  //the data are grouped into L distinct categories
+   int <lower=1> K;  //num of regression coefficients
+   vector[N] y;
+   int id[N];
+   matrix[N,K] X;
+ }
+parameters {
+   vector[K] gamma;
+   vector[K] tau;
+   real <lower=0> sigma;
+   vector[K] beta[J];
+ }
+model{
+vector[N] mu;
+gamma ~ normal(0,5);
+tau ~ cauchy(0,5);
+sigma ~ cauchy(0,5);
+for (j in 1:J) {
+  beta[j] ~ normal(gamma,tau);
+}
+for (n in 1:N){
+  mu[n] = X[n]*beta[id[n]];
+}
+
+y ~ normal(mu,sigma);
+
+}
+'
+
+write(sleep.stan,file = "sleep.stan")  
+set.seed(123) 	
+data(sleepstudy,package ='lme4')
+# D <- as.numeric(table(sleepstudy$Subject)[1])
+
+
+data_for_Stan <- list( N = nrow(sleepstudy),J = 18,K=2,
+                       y = sleepstudy$Reaction,X = cbind(1,sleepstudy$Days),
+                      id = rep(1:18,each=10))  
+
+fit <- stan(file = "sleep.stan", data = data_for_Stan) 
+summary(fit)$summary[,-c(5:7)]
+
+
+```
+## 案例2：分层logistics回归
+这是一个*非平衡面板数据*
+
+### 背景      
+&emsp;&emsp;牛传染性胸膜肺炎（Contagious bovine pleuropneumonia,CBPP）是非洲牛的一种主要疾病，由支原体引起。 数据集cbpp描述了对埃塞俄比亚Boji 地区 15 个牛群进行跟踪调查期间 CBPP 血清学发病率。调查的目的是研究新感染牛群中 CBPP 在牛群内部的传播情况。每季度从这些牛群的所有牲畜中采集血液样本，以确定它们的 CBPP 感染状况。这些数据用于计算 CBPP 的血清学发病率（特定时间段内出现的新病例）。部分数据缺失（失去跟踪）。变量定义如下：    
+herd:A factor identifying the herd (1 to 15).   
+
+incidence:The number of new serological cases for a given herd and time period.       
+
+size:A numeric vector describing herd size at the beginning of a given time period.       
+
+period:A factor with levels 1 to 4.       
+
+### 模型构建    
+
+按照广义线性模型的记号，
+\[p(y|x_j,\beta_j) = \prod_{i=1}^N Binomial(n,logistic(X_i^T \beta_j)\]
+
+\[\beta_{jk} \sim N(\mu,\tau^2)\]
+\[\mu \sim t(3,0,1)\]
+\[\tau \sim Cauchy(0,5)\]
+
+### R代码  
+读入数据并且把因子变量哑元化（不要截距）
+```{r warning=FALSE,message=FALSE,cache=TRUE}
+rm(list=ls())
+cbpp = lme4::cbpp
+str(cbpp)
+cbpp[,4] = as.factor(cbpp[,4])
+cbpp[,1] = as.integer(cbpp[,1])
+
+w = data.frame(model.matrix(~.-1,cbpp))
+```
+
+```{r warning=FALSE,message=FALSE,cache=TRUE}
+ml <- '
+data {
+int N; //num of observation
+int J; //num of groups
+int K; //num of columns in the model matrix(including intercept)
+int id[N]; //vector of group indeces
+matrix[N,K] X;
+int y[N];
+int n[N]; //size
+}
+
+parameters {
+  real mu;
+  real tau;
+  vector[K] beta[J];
+}
+
+model {
+vector[N] eta;
+mu ~ student_t(3,0,1);
+tau ~ normal(0,1);
+
+for (j in 1:J) {
+  beta[j] ~ normal(mu,tau);
+}
+
+for (i in 1:N){
+  eta[i] = inv_logit(X[i]*beta[id[i]]);
+}
+
+  y ~ binomial(n,eta);
+  
+}
+'
+```
+输入数据并估计模型
+```{r warning=FALSE,message=FALSE}
+library(rstan)
+df=list(N=nrow(w),J=15,K=4,id=w$herd,X=w[,4:7],y=w[,2],n=w$size)
+ml10 <- stan(model_code = ml,data=df)
+ml10
+```
+
+# 第13章 分层线性模型
+  
+## 案例1：预测美国总统选举    
+
+### 背景    
+
+### 模型构建    
+
+### R代码   
+
+# 第14章 缺失数据模型
+
+## 案例1：系列投票的多重插补      
+
+### 背景       
+
+### 模型构建        
+
+### R代码       
+
+
+# 第15章 缺失数据
+缺失数据的应用有两个：测量误差模型和贝叶斯填补。我们将用两个例子进行说明。以下数据来自Richard McElreath的《Statistical Rethinking》。电子书的网址是https://zlib.pub/book/statistical-rethinking-72f71dsdohb0 
+
+## 测量误差模型       
+具体包括两类：测量误差出现在因变量；测量误差出现在因变量和自变量。
+
+### 案例1：解释变量有测量误差            
+
+#### 背景      
+WaffleDivorce介绍华夫饼屋食客的数量以及各种婚姻和人口情况。
+Location : State name
+
+Loc : State abbreviation
+
+Population : 2010 population in millions
+
+MedianAgeMarriage: 2005-2010 median age at marriage
+
+Marriage : 2009 marriage rate per 1000 adults
+
+Marriage.SE : Standard error of rate
+
+Divorce : 2009 divorce rate per 1000 adults
+
+Divorce.SE : Standard error of rate
+
+WaffleHouses : Number of diners
+
+South : 1 indicates Southern State
+
+Slaves1860 : Number of slaves in 1860 census
+
+Population1860 : Population from 1860 census
+
+PropSlaves1860 : Proportion of total population that were slaves in 1860
+
+这里的目的是对离婚率D建模，预测变量为结婚年龄A和结婚率R.
+
+#### 模型构建     
+$$
+\begin{equation}{}
+D_{EST,i} \sim normal(\mu_i,\sigma)    \\
+\mu_i = \alpha + \beta_A A_i + \beta_R R_i  \\
+D_{OBS,i} \sim normal(D_{EST,i},D_{SE,i})   \\
+\alpha \sim normal(0,10)   \\
+\beta_A \sim normal(0,10)   \\
+\beta_R \sim normal(0,10)   \\
+\sigma \sim Cauchy(0,2.5) \\
+
+\end{equation}
+$$
+该模型与经典的线性模型的唯一区别是将结果变量换成了一个参数向量。
+
+#### R代码   
+
+
+### 案例2：解释变量和被解释变量有测量误差        
+
+#### 背景    
+
+#### 模型构建    
+
+#### R代码   
+
+
+# 第16章 参数非线性模型
+
+## 案例1：系列稀释实验    
+
+### 背景    
+
+### 模型构建    
+
+### R代码   
+
+## 案例2：群体毒物动力学    
+
+### 背景    
+
+### 模型构建    
+
+### R代码   
+
+# 第17章 高斯过程模型
+
+## 案例1：生日和出生年月日     
+
+### 背景    
+
+### 模型构建    
+
+### R代码   
+
+## 案例2：   
+
+### 背景    
+
+### 模型构建    
+
+### R代码   
+
+# 第18章 有限混合模型   
+   
+## 案例1：反应时间和精神分裂症状  
+
+### 背景    
+
+### 模型构建    
+
+### R代码   
+
+# 第19章 分层贝叶斯时空模型   
+空间数据通常被视为以下三种类型之一：点参考数据(point reference  data)、面元数据(areal unit data)和随机空间点模式数据。
+
+点参考数据（也被称为地统计数据）主要指在固定空间位置观测到的随机变量数据，每个观测点都有一个地理编码的位置参考，如经纬度对.
+nyspatial是一个点参考空间数据(point reference spatial data)，有28行9列：
+s.index: site index (1 to 28)
+
+Longitude:Longitude of the site
+
+Latitude:Latitude of the site
+
+utmx:UTM X-coordinate of the site
+
+utmy:UTM Y-coordinate of the site
+
+yo3:Average ozone concentration value (ppb) at the site over 62 days in July and August, 2006
+
+xmaxtemp:Average maximum temperature (degree Celsius) at the site over 62 days in July and August, 2006
+
+xwdsp:Average wind speed (nautical mile per hour) over 62 days in July and August, 2006
+
+xrh:Average relative humidity over 62 days in July and August, 2006
+```{r warning=FALSE,message=FALSE}
+data("nyspatial",package = 'bmstdr')
+head(nyspatial)
+```
+nysptime是一个点参考时空数据,包括了纽约州7-8月62天的层级臭氧空气污染数据。有1736(28*62)行12列。
+```{r warning=FALSE,message=FALSE}
+data("nysptime",package = 'bmstdr')
+names(nysptime)
+head(nysptime)
+```
+与nyspatial相比，nysptime增加了时间数据。
+
+
+面元数据是指一组观测数据的空间参照(spatial references)由地图上的相邻区域给出。例如，下一节将讨论两个数据集，提供英格兰 313 个地方行政区域因 Covid-19导致的死亡人数。面元数据通常可以是离散的，如死亡人数，也可以是连续的，如城市的平均空气污染水平。
+
+```{r warning=FALSE,message=FALSE}
+library(spTimer)
+data("NYdata")
+head(NYdata)
+s <- c(8, 11, 12, 14, 18, 21, 24, 28)
+DataFit <- spT.subset(data = NYdata, var.name = "s.index", s = s,
+                          reverse = TRUE)
+DataFit <- subset(DataFit,
+                     with(DataFit, !(Day %in% c(30, 31) & Month == 8)))
+
+DataValPred <- spT.subset(data = NYdata, var.name = "s.index", s = s)
+DataValPred <- subset(DataValPred,
+                          with(DataValPred, !(Day %in% c(30, 31) & Month == 8)))
+
+set.seed(11)
+post.gp <- spT.Gibbs(formula = o8hrmax ~ cMAXTMP + WDSP + RH,
+                         data = DataFit, model = "GP",
+                         coords = ~ Longitude + Latitude, scale.transform = "SQRT",
+                         spatial.decay = spT.decay(distribution = Gamm(2, 1),
+                                                   tuning = 0.1))
+
+print(post.gp)
+
+plot(post.gp)
+library(coda)
+autocorr.diag(
+as.mcmc(post.gp))
+
+plot(post.gp, residuals = TRUE)
+
+summary(post.gp)
+
+set.seed(11)
+pred.gp <- predict(post.gp, newdata = DataValPred,
+                      newcoords = ~ Longitude + Latitude)
+print(pred.gp)
+
+
+
+```
+
+```{r}
+spT.validation(DataValPred$o8hrmax, c(pred.gp$Median))
+```
+
+我们观测到：相比广义可加模型，贝叶斯space-time
+GP model的MSE下降了56%。
+
+
+### 背景    
+
+### 模型构建    
+
+### R代码   
+
+
+# 第20章 零膨胀泊松回归模型 
+
+### 背景    
+
+### 模型构建    
+
+### R代码   
+
+
+# 第21章 删失数据与生存分析         
+例子来自plymouth大学Julian Stander的课件。
+
+### 背景    
+英国的国王从忏悔者爱德华（1042年至1066年在位）到目前的查尔斯，已经经历了47个国王。由于查尔斯还在世，因而出现了删失。
+
+这里的兴趣变量是国王的存活时间（从登基到死亡）。    
+解释变量是登基时间及其中心化时间（考虑时代变迁因素）。
+
+### 模型构建  
+假设英国国王的存活时间$T_i$服从Weibull分布。该分布有两个参数，分布函数为
+\[Pr(T_i \le t_i |r,\mu_i) = 1- exp(-\mu_i t_i^r)\]
+密度函数为
+\[f_{T_i}(t_i |r,\mu_i) = r\mu_i t_i^{r-1} exp(-\mu_i t_i^r)\]
+$T_i$的均值   
+\[mean[T_i] = \Gamma(1+\frac{1}{r})(\frac{1}{\mu_i})^{1/r}\]
+$\Gamma$表示gamma函数。$T_i$的中位数   
+\[median[T_i] = \{\frac{log(2)}{\mu_i}\}^{1/r}\]
+
+$$
+\begin{equation}{}
+T_i \sim Weibull(r,\mu_i) \\
+log(\mu_i) = X \beta
+\end{equation}
+$$
+
+### R代码  
+```{r warning=FALSE,message=FALSE}
+##Data processing
+rm(list=ls())
+library(tidyverse)
+library(readxl)
+setwd('D:\\plymouth课程\\3613\\Coursework Documents-20211207')
+monarchs <- read_excel("Monarchs.xlsx")
+
+library(lubridate)
+#
+monarchs_2 <- monarchs %>%
+  mutate(Start_of_reign = dmy(Start_of_reign),
+         End_of_reign = dmy(End_of_reign),
+         Birth = dmy(Birth),
+         Death = dmy(Death))
+monarchs_3 <- monarchs_2 %>%
+  mutate(Age_at_start_of_reign =
+           time_length(interval(Birth, Start_of_reign), "years"),
+         Survival_after_start_of_reign =
+           time_length(interval(Start_of_reign, Death), "years"))
+#
+monarchs_4 <- monarchs_3 %>%
+  mutate(Start_of_reign_numeric = decimal_date(Start_of_reign))
+#
+mean_start_of_reign <- with(monarchs_4,
+                            mean(Start_of_reign_numeric))
+#
+mean_start_of_reign
+monarchs_5 <- monarchs_4 %>%
+  mutate(intercept =1,
+         Start_of_reign_centered =
+         Start_of_reign_numeric - mean_start_of_reign,
+         is_censored = ifelse(Cause_of_death %in% 
+                                c('Killed', 'Murdered','Starved to death',
+                                  'Executed','Living'),1,0)) %>% 
+  dplyr::select(Survival_after_start_of_reign,is_censored,
+                intercept,Age_at_start_of_reign,
+                Start_of_reign_centered)
+
+data_for_Stan <- list(n_censored = with(monarchs_5,sum(is_censored)),
+                      n_not_censored = with(monarchs_5,sum(1-is_censored)),
+                      K=3,
+                      t_censored = with(monarchs_5,Survival_after_start_of_reign[is_censored == 1]),
+                      t_not_censored = with(monarchs_5,Survival_after_start_of_reign[is_censored == 0]),
+                      x_censored = monarchs_5 %>% filter(is_censored == 1) %>% 
+                        dplyr::select(-c(is_censored ,Survival_after_start_of_reign,Survival_after_start_of_reign)),            
+                      x_not_censored = monarchs_5 %>% filter(is_censored == 0) %>% 
+                        dplyr::select(-c(is_censored,Survival_after_start_of_reign,Survival_after_start_of_reign)) )                                
+
+##Model with Bayessian framework
+library(rstan)
+Bayesian_model <- 
+"
+data {
+ int < lower = 1 > n_censored;
+ int < lower = 1 > n_not_censored; 
+ int < lower = 1 > K;
+ vector[n_censored] t_censored; 
+ vector[n_not_censored] t_not_censored;
+ matrix[n_censored,K] x_censored; 
+ matrix[n_not_censored,K] x_not_censored;
+}
+
+parameters {
+ vector[K] beta; 
+ real < lower = 0 > rho; 
+}
+
+model {
+beta ~ normal(0,100);
+target += cauchy_lpdf(rho|1.0, 10.0); 
+
+target += weibull_lpdf(t_not_censored | rho, exp(x_not_censored * beta));
+
+target += weibull_lccdf(t_censored | rho, exp(x_censored * beta));
+}
+
+"
+write(Bayesian_model,file = "Bayesian_model.stan") 
+
+fit_predict = stan(file = "Bayesian_model.stan", 
+                    data = data_for_Stan,
+                    warmup = 1000, 
+                    iter = 2000,
+                    chains = 4, 
+                    cores = 2, 
+                    thin = 1) 
+
+fit_predict
+
+```
+
+       
